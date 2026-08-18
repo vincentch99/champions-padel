@@ -1085,15 +1085,12 @@
       return;
     }
 
-    // Build venue row — single line spanning all columns
-    const venueList = venues
-      .map((v, i) => v ? `<span style="margin-right:1.2rem;"><span style="opacity:0.5;font-size:0.7rem;">Wk ${i+1}</span> ${v}</span>` : '')
-      .filter(Boolean).join('');
-    const venueRow = venueList
+    // Build venue row — one row, each venue aligned under its week column
+    const venueRow = venues.some(v => v)
       ? `<tr class="venue-row">
-          <td colspan="8" style="padding:0.5rem 1rem;">
-            <span style="opacity:0.5;font-size:0.7rem;letter-spacing:0.08em;margin-right:0.75rem;">📍 VENUES</span>${venueList}
-          </td>
+          <td colspan="3" style="color:var(--gray);font-size:0.7rem;letter-spacing:0.08em;white-space:nowrap;">📍 VENUES</td>
+          ${venues.map(v => `<td style="white-space:nowrap;font-weight:600;font-size:0.8rem;">${v ? '📍 ' + v : ''}</td>`).join('')}
+          <td></td>
         </tr>`
       : '';
 
