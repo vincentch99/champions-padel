@@ -1085,12 +1085,15 @@
       return;
     }
 
-    // Build venue sub-header row
-    const venueRow = venues.some(v => v)
+    // Build venue row — single line spanning all columns
+    const venueList = venues
+      .map((v, i) => v ? `<span style="margin-right:1.2rem;"><span style="opacity:0.5;font-size:0.7rem;">Wk ${i+1}</span> ${v}</span>` : '')
+      .filter(Boolean).join('');
+    const venueRow = venueList
       ? `<tr class="venue-row">
-          <td colspan="3" style="color:var(--gray);font-size:0.7rem;letter-spacing:0.08em;">📍 VENUE</td>
-          ${venues.map(v => `<td class="venue-loc">${v ? '📍 ' + v : '—'}</td>`).join('')}
-          <td></td>
+          <td colspan="8" style="padding:0.5rem 1rem;">
+            <span style="opacity:0.5;font-size:0.7rem;letter-spacing:0.08em;margin-right:0.75rem;">📍 VENUES</span>${venueList}
+          </td>
         </tr>`
       : '';
 
