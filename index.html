@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Champions Club — Fix Mix Sundays</title>
+  <style>
+    :root {
+      --gold: #F5C842;
+      --gold-dark: #d4a820;
+      --navy: #0B1437;
+      --navy-mid: #132057;
+      --navy-light: #1c2e6e;
+      --white: #ffffff;
+      --gray: #a0aec0;
+      --green: #22c55e;
+      --red: #ef4444;
+      --card-bg: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      line-height: 1.6;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(11, 20, 55, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .nav-logo .trophy { font-size: 1.4rem; }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--gray);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--gold); }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 1.5rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 30%, rgba(245,200,66,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 20% 80%, rgba(34,197,94,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .court-lines {
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(0deg, transparent 49%, rgba(255,255,255,0.8) 49%, rgba(255,255,255,0.8) 51%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(255,255,255,0.8) 49%, rgba(255,255,255,0.8) 51%, transparent 51%);
+      background-size: 120px 120px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(245,200,66,0.15);
+      border: 1px solid rgba(245,200,66,0.3);
+      color: var(--gold);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.8rem, 8vw, 6rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero h1 span { color: var(--gold); }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--gray);
+      margin-bottom: 2.5rem;
+      max-width: 520px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--navy);
+      box-shadow: 0 4px 20px rgba(245,200,66,0.35);
+    }
+
+    .btn-primary:hover { box-shadow: 0 6px 28px rgba(245,200,66,0.5); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    .hero-stats {
+      display: flex;
+      gap: 3rem;
+      margin-top: 4rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hero-stat { text-align: center; }
+    .hero-stat .num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .hero-stat .label {
+      font-size: 0.78rem;
+      color: var(--gray);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    /* ─── SECTIONS ─── */
+    section {
+      padding: 5rem 1.5rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.6rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--gray);
+      font-size: 1rem;
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+
+    /* ─── FORMAT ─── */
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .format-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .format-card:hover {
+      border-color: rgba(245,200,66,0.3);
+      transform: translateY(-3px);
+    }
+
+    .format-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .format-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .format-card p {
+      color: var(--gray);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    /* ─── POINTS SYSTEM ─── */
+    #points { background: var(--navy-mid); }
+
+    .points-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 700px) {
+      .points-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+
+    .points-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .points-card h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .points-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .points-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 1rem;
+      background: rgba(255,255,255,0.04);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .points-list li .pts {
+      font-weight: 800;
+      color: var(--gold);
+      font-size: 1rem;
+    }
+
+    .drop-rule {
+      margin-top: 2rem;
+      padding: 1.2rem;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 10px;
+      font-size: 0.88rem;
+      color: #86efac;
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    /* ─── PRIZES ─── */
+    .prizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .prize-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+
+    .prize-card:hover { transform: translateY(-3px); }
+
+    .prize-card.featured {
+      border-color: rgba(245,200,66,0.4);
+      background: rgba(245,200,66,0.05);
+    }
+
+    .prize-card.featured::before {
+      content: 'TOP PRIZE';
+      position: absolute;
+      top: 0.8rem; right: -1.8rem;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 2rem;
+      transform: rotate(45deg);
+    }
+
+    .prize-icon { font-size: 2.8rem; margin-bottom: 1rem; }
+
+    .prize-card h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+    }
+
+    .prize-card p {
+      color: var(--gray);
+      font-size: 0.88rem;
+    }
+
+    /* ─── LEADERBOARD ─── */
+    #leaderboard { background: var(--navy-mid); }
+
+    .month-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .month-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--gray);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .month-btn.active, .month-btn:hover {
+      background: var(--gold);
+      color: var(--navy);
+      border-color: var(--gold);
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .leaderboard-table th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      color: var(--gray);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .leaderboard-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .leaderboard-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .rank {
+      font-weight: 900;
+      font-size: 1rem;
+      color: var(--gray);
+      width: 2.5rem;
+    }
+
+    .rank-1 { color: #FFD700; }
+    .rank-2 { color: #C0C0C0; }
+    .rank-3 { color: #CD7F32; }
+
+    .player-name {
+      font-weight: 700;
+    }
+
+    .player-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--navy-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: var(--gold);
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .player-cell {
+      display: flex;
+      align-items: center;
+    }
+
+    .sessions-cell span {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 3px;
+    }
+
+    .session-attended { background: var(--green); }
+    .session-dropped { background: #f97316; opacity: 0.5; }
+    .session-missed { background: var(--border); }
+
+    .total-pts {
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: var(--gold);
+    }
+
+    .trend {
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .trend.up { color: var(--green); }
+    .trend.down { color: var(--red); }
+    .trend.flat { color: var(--gray); }
+
+    .leaderboard-footer {
+      margin-top: 1.5rem;
+      padding: 1rem 1.2rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.82rem;
+      color: var(--gray);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      max-width: 680px;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 1.4rem;
+      top: 2.5rem;
+      bottom: 2.5rem;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--gold), transparent);
+    }
+
+    .step {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem 0;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 900;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-content h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .step-content p {
+      color: var(--gray);
+      font-size: 0.88rem;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      padding: 3rem 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.82rem;
+    }
+
+    footer .footer-logo {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+    }
+
+    footer .footer-logo span { color: var(--gold); }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards;
+    }
+
+    .fade-up:nth-child(1) { animation-delay: 0.1s; }
+    .fade-up:nth-child(2) { animation-delay: 0.2s; }
+    .fade-up:nth-child(3) { animation-delay: 0.3s; }
+    .fade-up:nth-child(4) { animation-delay: 0.4s; }
+
+    /* ─── PILL TAGS ─── */
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-gold { background: rgba(245,200,66,0.15); color: var(--gold); }
+    .tag-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span class="trophy">🏆</span> Champions Club
+  </a>
+  <ul class="nav-links">
+    <li><a href="#format">Format</a></li>
+    <li><a href="#points">Points</a></li>
+    <li><a href="#prizes">Prizes</a></li>
+    <li><a href="#leaderboard">Leaderboard</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="court-lines"></div>
+  <div class="hero-badge">🎾 Every Sunday</div>
+  <h1 class="fade-up">Champions<br /><span>Club</span></h1>
+  <p class="hero-sub fade-up">Fix Mix Sundays — rotate partners, compete for points, climb the monthly leaderboard.</p>
+  <div class="hero-cta fade-up">
+    <a href="#leaderboard" class="btn btn-primary">View Leaderboard</a>
+    <a href="#points" class="btn btn-outline">How Points Work</a>
+  </div>
+  <div class="hero-stats fade-up">
+    <div class="hero-stat">
+      <div class="num">4</div>
+      <div class="label">Sundays / Month</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">3</div>
+      <div class="label">Best Sessions Count</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">3</div>
+      <div class="label">Prize Categories</div>
+    </div>
+  </div>
+</section>
+
+<!-- FORMAT -->
+<section id="format">
+  <div class="container">
+    <div class="section-label">The Format</div>
+    <h2 class="section-title">Fix Mix Sundays</h2>
+    <p class="section-desc">Players rotate partners across several rounds — your individual performance is what counts, not who you're paired with.</p>
+    <div class="format-grid">
+      <div class="format-card fade-up">
+        <div class="format-icon">🔄</div>
+        <h3>Rotating Partners</h3>
+        <p>Each round you play with a different partner, so the playing field stays level and you get to mix with everyone on court.</p>
+      </div>
+      <div class="format-card fade-up">
+        <div class="format-icon">📊</div>
+        <h3>Individual Scoring</h3>
+        <p>Points are tracked per person. Winning a game earns you points regardless of who your partner was that round.</p>
+      </div>
+      <div class="format-card fade-up">
+        <div class="format-icon">📅</div>
+        <h3>Monthly Competition</h3>
+        <p>Weekly totals add up across the month. Your best 3 sessions count — one bad Sunday won't knock you out of the running.</p>
+      </div>
+      <div class="format-card fade-up">
+        <div class="format-icon">🤝</div>
+        <h3>Social First</h3>
+        <p>Competitive enough to care, relaxed enough to enjoy. New and returning players welcome every week.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POINTS -->
+<section id="points">
+  <div class="container">
+    <div class="section-label">Scoring System</div>
+    <h2 class="section-title">How Points Work</h2>
+    <p class="section-desc">Designed to reward winning, reward showing up, and keep everyone in the race until the final Sunday.</p>
+
+    <div class="points-grid">
+      <!-- Weekly -->
+      <div class="points-card">
+        <h3>📅 Weekly Points</h3>
+        <ul class="points-list">
+          <li>
+            <span>Games Won (per game)</span>
+            <span class="pts">+1 pt</span>
+          </li>
+          <li>
+            <span>Attendance Bonus</span>
+            <span class="pts">+5 pts</span>
+          </li>
+          <li>
+            <span>Session Winner Bonus</span>
+            <span class="pts">+3 pts</span>
+          </li>
+        </ul>
+        <div class="drop-rule">
+          <span>💡</span>
+          <span>Showing up guarantees 5 points even on a bad day — so there's always a reason to come back next week.</span>
+        </div>
+      </div>
+
+      <!-- Monthly -->
+      <div class="points-card">
+        <h3>🏆 Monthly Ranking</h3>
+        <ul class="points-list">
+          <li>
+            <span>Sessions counted per month</span>
+            <span class="pts">Best 3</span>
+          </li>
+          <li>
+            <span>Worst session</span>
+            <span class="pts">Dropped</span>
+          </li>
+          <li>
+            <span>Monthly total</span>
+            <span class="pts">Sum of best 3</span>
+          </li>
+        </ul>
+        <div class="drop-rule">
+          <span>🎯</span>
+          <span>Drop-week rule means one missed or bad Sunday doesn't kill your month. You can still climb back.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example calc -->
+    <div style="margin-top:2rem; background: var(--card-bg); border: 1px solid var(--border); border-radius:16px; padding:2rem;">
+      <h3 style="font-size:1rem; font-weight:800; margin-bottom:1.2rem;">📝 Example Week</h3>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:0.88rem;">
+        <div style="flex:1; min-width:200px;">
+          <div style="color:var(--gray); margin-bottom:0.5rem;">Player scores 6 games won + shows up + wins the day:</div>
+          <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0.8rem; background:rgba(255,255,255,0.04); border-radius:6px;">
+              <span>6 games won</span><span style="color:var(--gold); font-weight:700;">+6 pts</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0.8rem; background:rgba(255,255,255,0.04); border-radius:6px;">
+              <span>Attendance</span><span style="color:var(--gold); font-weight:700;">+5 pts</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0.8rem; background:rgba(255,255,255,0.04); border-radius:6px;">
+              <span>Session winner</span><span style="color:var(--gold); font-weight:700;">+3 pts</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0.8rem; background:rgba(245,200,66,0.1); border-radius:6px; border:1px solid rgba(245,200,66,0.3);">
+              <span style="font-weight:700;">Total</span><span style="color:var(--gold); font-weight:900; font-size:1.1rem;">14 pts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIZES -->
+<section id="prizes">
+  <div class="container">
+    <div class="section-label">End of Month</div>
+    <h2 class="section-title">Prize Categories</h2>
+    <p class="section-desc">Three categories so more people have a real shot — not just the top players.</p>
+    <div class="prizes-grid">
+      <div class="prize-card featured fade-up">
+        <div class="prize-icon">🥇</div>
+        <h3>Top Champion</h3>
+        <p>Highest total points across their best 3 sessions of the month.</p>
+        <div style="margin-top:1rem;"><span class="tag tag-gold">Monthly Winner</span></div>
+      </div>
+      <div class="prize-card fade-up">
+        <div class="prize-icon">📈</div>
+        <h3>Most Improved</h3>
+        <p>Biggest positive jump from their own weekly average compared to the previous month.</p>
+        <div style="margin-top:1rem;"><span class="tag tag-green">Growth Award</span></div>
+      </div>
+      <div class="prize-card fade-up">
+        <div class="prize-icon">🎯</div>
+        <h3>Most Consistent</h3>
+        <p>Attended every single Sunday of the month. Reliability gets rewarded.</p>
+        <div style="margin-top:1rem;"><span class="tag tag-green">Full Attendance</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEADERBOARD -->
+<section id="leaderboard">
+  <div class="container">
+    <div class="section-label">Monthly Standings</div>
+    <h2 class="section-title">Leaderboard</h2>
+    <p class="section-desc">Updated after each Sunday session. Best 3 weeks count.</p>
+
+    <div class="month-selector">
+      <button class="month-btn">June</button>
+      <button class="month-btn">July</button>
+      <button class="month-btn active">August</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Sessions</th>
+            <th>Wk 1</th>
+            <th>Wk 2</th>
+            <th>Wk 3</th>
+            <th>Wk 4</th>
+            <th>Total</th>
+            <th>Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rank rank-1">🥇</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">MR</div>
+                <span class="player-name">Marco R.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-attended" title="Attended"></span>
+                <span class="session-attended" title="Attended"></span>
+                <span class="session-attended" title="Attended"></span>
+                <span class="session-missed" title="Missed"></span>
+              </div>
+            </td>
+            <td>14</td><td>12</td><td>11</td><td>—</td>
+            <td class="total-pts">37</td>
+            <td><span class="trend up">▲ 4</span></td>
+          </tr>
+          <tr>
+            <td class="rank rank-2">🥈</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">AS</div>
+                <span class="player-name">Ana S.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-missed"></span>
+              </div>
+            </td>
+            <td>13</td><td>10</td><td>13</td><td>—</td>
+            <td class="total-pts">36</td>
+            <td><span class="trend up">▲ 2</span></td>
+          </tr>
+          <tr>
+            <td class="rank rank-3">🥉</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">JL</div>
+                <span class="player-name">James L.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-attended"></span>
+                <span class="session-dropped" title="Counted but dropped"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+              </div>
+            </td>
+            <td>11</td><td style="color:var(--gray);opacity:0.5;"><s>6</s></td><td>12</td><td>9</td>
+            <td class="total-pts">32</td>
+            <td><span class="trend flat">— 0</span></td>
+          </tr>
+          <tr>
+            <td class="rank">4</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">KW</div>
+                <span class="player-name">Kim W.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+              </div>
+            </td>
+            <td>9</td><td>10</td><td>8</td><td>11</td>
+            <td class="total-pts">30</td>
+            <td><span class="trend up">▲ 1</span></td>
+          </tr>
+          <tr>
+            <td class="rank">5</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">DM</div>
+                <span class="player-name">Dana M.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-missed"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+              </div>
+            </td>
+            <td>—</td><td>9</td><td>11</td><td>8</td>
+            <td class="total-pts">28</td>
+            <td><span class="trend down">▼ 3</span></td>
+          </tr>
+          <tr>
+            <td class="rank">6</td>
+            <td>
+              <div class="player-cell">
+                <div class="player-avatar">TC</div>
+                <span class="player-name">Tom C.</span>
+              </div>
+            </td>
+            <td>
+              <div class="sessions-cell">
+                <span class="session-attended"></span>
+                <span class="session-attended"></span>
+                <span class="session-missed"></span>
+                <span class="session-attended"></span>
+              </div>
+            </td>
+            <td>8</td><td>7</td><td>—</td><td>10</td>
+            <td class="total-pts">25</td>
+            <td><span class="trend up">▲ 5</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="leaderboard-footer">
+      <span style="opacity:0.6;">Legend:</span>
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span> Attended</span>
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:2px;background:#f97316;opacity:0.5;display:inline-block;"></span> Dropped (worst week)</span>
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:2px;background:var(--border);display:inline-block;"></span> Missed</span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-label">Getting Started</div>
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-desc">Simple to follow, every Sunday.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Show Up Sunday</h4>
+          <p>You bank your 5 attendance points the moment you step on court. Every session counts toward your monthly total.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Play Your Rounds</h4>
+          <p>Partners rotate each round. Win games, earn points. The session winner (most games won that day) gets a bonus +3.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Leaderboard Posted</h4>
+          <p>After each Sunday the updated standings go out on WhatsApp/Instagram so everyone can track the month in real time.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Month Closes</h4>
+          <p>Your best 3 sessions are summed up. Worst week dropped. Prizes awarded across Top Champion, Most Improved, and Most Consistent.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Champions <span>Club</span></div>
+  <p>Fix Mix Sundays &mdash; see you on court 🎾</p>
+</footer>
+
+<script>
+  // Month selector tabs
+  document.querySelectorAll('.month-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Intersection observer for fade-up
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.animation = 'fadeUp 0.6s ease forwards';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.format-card, .prize-card').forEach(el => {
+    el.style.opacity = '0';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
