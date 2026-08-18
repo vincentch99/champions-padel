@@ -587,6 +587,56 @@
 
     footer .footer-logo span { color: var(--gold); }
 
+    /* ─── LIVE INDICATOR ─── */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.28rem 0.75rem;
+      border-radius: 100px;
+    }
+
+    .live-ball {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      position: relative;
+      flex-shrink: 0;
+      animation: ballDim 1s steps(1, end) infinite;
+    }
+
+    .live-ball::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: rgba(239,68,68,0.3);
+      animation: ballRipple 1s ease-out infinite;
+    }
+
+    @keyframes ballDim {
+      0%, 49%  { opacity: 1; }
+      50%, 100% { opacity: 0.2; }
+    }
+
+    @keyframes ballRipple {
+      0%   { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    .live-timestamp {
+      font-size: 0.75rem;
+      color: var(--gray);
+      margin-left: 0.5rem;
+    }
+
     /* ─── ANIMATIONS ─── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
@@ -630,6 +680,10 @@
     <li><a href="#prizes">Prizes</a></li>
     <li><a href="#leaderboard">Leaderboard</a></li>
   </ul>
+  <span class="live-badge">
+    <span class="live-ball"></span>
+    LIVE
+  </span>
 </nav>
 
 <!-- HERO -->
@@ -805,6 +859,14 @@
     <div class="section-label">Monthly Standings</div>
     <h2 class="section-title">Leaderboard</h2>
     <p class="section-desc">Updated after each Sunday session. Best 3 weeks count.</p>
+
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+      <span class="live-badge">
+        <span class="live-ball"></span>
+        LIVE
+      </span>
+      <span class="live-timestamp" id="live-clock">Updated just now</span>
+    </div>
 
     <div class="month-selector">
       <button class="month-btn">June</button>
@@ -1007,6 +1069,18 @@
 </footer>
 
 <script>
+  // Live clock — ticks every second
+  const clockEl = document.getElementById('live-clock');
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    clockEl.textContent = `Last refreshed ${h}:${m}:${s}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
   // Month selector tabs
   document.querySelectorAll('.month-btn').forEach(btn => {
     btn.addEventListener('click', () => {
