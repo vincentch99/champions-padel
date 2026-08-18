@@ -925,11 +925,7 @@
       <span class="live-timestamp" id="live-clock">Updated just now</span>
     </div>
 
-    <div class="month-selector">
-      <button class="month-btn">June</button>
-      <button class="month-btn">July</button>
-      <button class="month-btn active">August</button>
-    </div>
+    <div class="month-selector" id="month-selector"></div>
 
     <div id="leaderboard-status" style="padding:2rem;text-align:center;color:var(--gray);">
       <div style="display:inline-flex;align-items:center;gap:0.6rem;">
@@ -1011,12 +1007,18 @@
 </footer>
 
 <script>
-  // ── CONFIG: paste your published Google Sheet CSV URL here ──────────────────
-  // Steps:
-  //   1. Open your Google Sheet
-  //   2. File → Share → Publish to web → select Sheet1 → CSV → Publish
-  //   3. Copy the URL and replace the string below
-  const SHEET_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+  // ── CONFIG ───────────────────────────────────────────────────────────────────
+  // One entry per month. Key = label shown on the tab. Value = published CSV URL.
+  // To add a new month:
+  //   1. Create a new tab in your Google Sheet named e.g. "September 2026"
+  //   2. File → Share → Publish to web → select that tab → CSV → Publish
+  //   3. Add the URL below as a new entry and set CURRENT_MONTH to the new key.
+  const SHEET_URLS = {
+    'June 2026':     'YOUR_JUNE_CSV_URL_HERE',
+    'July 2026':     'YOUR_JULY_CSV_URL_HERE',
+    'August 2026':   'YOUR_AUGUST_CSV_URL_HERE',
+  };
+  const CURRENT_MONTH = 'August 2026'; // active month — auto-refreshes every 60s
   // ────────────────────────────────────────────────────────────────────────────
 
   // ── LIVE CLOCK ──────────────────────────────────────────────────────────────
@@ -1145,47 +1147,66 @@
     el.innerHTML = `<div style="padding:2rem;text-align:center;color:${isError ? '#fca5a5' : 'var(--gray)'};">${msg}</div>`;
   }
 
+  // ── MONTH TABS (dynamically built from SHEET_URLS) ──────────────────────────
+  let activeMonth = CURRENT_MONTH;
+  let refreshTimer = null;
+
+  const monthSelector = document.getElementById('month-selector');
+  Object.keys(SHEET_URLS).forEach(month => {
+    const btn = document.createElement('button');
+    btn.className = 'month-btn' + (month === CURRENT_MONTH ? ' active' : '');
+    const isPast = month !== CURRENT_MONTH;
+    btn.innerHTML = month + (isPast ? ' <span style="font-size:0.65rem;opacity:0.6;margin-left:0.2rem;">HISTORY</span>' : '');
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeMonth = month;
+      clearInterval(refreshTimer);
+      fetchLeaderboard();
+      // Only auto-refresh on the current month
+      if (month === CURRENT_MONTH) {
+        refreshTimer = setInterval(fetchLeaderboard, 60000);
+      }
+    });
+    monthSelector.appendChild(btn);
+  });
+
   // ── FETCH ────────────────────────────────────────────────────────────────────
   async function fetchLeaderboard() {
-    if (SHEET_URL === 'YOUR_GOOGLE_SHEET_CSV_URL_HERE') {
+    const url = SHEET_URLS[activeMonth];
+
+    if (!url || url.includes('YOUR_') || url.includes('_URL_HERE')) {
       showStatus(`
-        <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:1.5rem;max-width:520px;margin:0 auto;text-align:left;">
-          <div style="font-weight:800;color:var(--gold);margin-bottom:0.75rem;">📋 Connect your Google Sheet</div>
+        <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:1.5rem;max-width:540px;margin:0 auto;text-align:left;">
+          <div style="font-weight:800;color:var(--gold);margin-bottom:0.75rem;">📋 Connect your Google Sheet for <em>${activeMonth}</em></div>
           <ol style="padding-left:1.2rem;line-height:2;font-size:0.88rem;">
-            <li>Create a Google Sheet with columns: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">player1, player2, wk1, wk2, wk3, wk4</code></li>
-            <li>First data row: put <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">LOCATION</code> in player1, then each week's venue in wk1–wk4</li>
-            <li>Add one team per row — player1 = male, player2 = female. Leave wk blank if they missed.</li>
-            <li>File → Share → <strong>Publish to web</strong> → Sheet1 → CSV → Publish</li>
-            <li>Copy the URL and replace <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_GOOGLE_SHEET_CSV_URL_HERE</code> in <code>index.html</code></li>
+            <li>In your Google Spreadsheet, create a tab named <strong>${activeMonth}</strong></li>
+            <li>Add columns: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">player1, player2, wk1, wk2, wk3, wk4</code></li>
+            <li>Row 1 data: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">LOCATION</code> in player1, venue names in wk1–wk4</li>
+            <li>Each team row: player1 = male, player2 = female — leave wk blank if missed</li>
+            <li>File → Share → <strong>Publish to web</strong> → select the <strong>${activeMonth}</strong> tab → CSV → Publish</li>
+            <li>Paste the URL into <code>SHEET_URLS['${activeMonth}']</code> in <code>index.html</code></li>
           </ol>
         </div>
       `);
       return;
     }
 
-    showStatus(`<div style="display:inline-flex;align-items:center;gap:0.6rem;"><span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);border-top-color:transparent;display:inline-block;animation:spin 0.8s linear infinite;"></span>Loading…</div>`);
+    showStatus(`<div style="display:inline-flex;align-items:center;gap:0.6rem;"><span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);border-top-color:transparent;display:inline-block;animation:spin 0.8s linear infinite;"></span>Loading ${activeMonth}…</div>`);
 
     try {
-      const res = await fetch(`${SHEET_URL}&cachebust=${Date.now()}`);
+      const res = await fetch(`${url}&cachebust=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       renderLeaderboard(parseCSV(text));
     } catch (e) {
-      showStatus(`Could not load data from Google Sheets.<br><small style="opacity:0.6;">${e.message}</small>`, true);
+      showStatus(`Could not load data for <strong>${activeMonth}</strong>.<br><small style="opacity:0.6;">${e.message}</small>`, true);
     }
   }
 
-  // Initial fetch + auto-refresh every 60 seconds
+  // Initial load + auto-refresh for current month only
   fetchLeaderboard();
-  setInterval(fetchLeaderboard, 60000);
-
-  // ── MONTH TABS ───────────────────────────────────────────────────────────────
-  document.querySelectorAll('.month-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
+  refreshTimer = setInterval(fetchLeaderboard, 60000);
 
   // ── FADE-UP ON SCROLL ────────────────────────────────────────────────────────
   const observer = new IntersectionObserver((entries) => {
