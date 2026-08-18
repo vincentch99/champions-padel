@@ -638,6 +638,10 @@
     }
 
     /* ─── ANIMATIONS ─── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -874,7 +878,14 @@
       <button class="month-btn active">August</button>
     </div>
 
-    <div style="overflow-x:auto;">
+    <div id="leaderboard-status" style="padding:2rem;text-align:center;color:var(--gray);">
+      <div style="display:inline-flex;align-items:center;gap:0.6rem;">
+        <span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);border-top-color:transparent;display:inline-block;animation:spin 0.8s linear infinite;"></span>
+        Loading leaderboard from Google Sheets…
+      </div>
+    </div>
+
+    <div id="leaderboard-wrap" style="display:none; overflow-x:auto;">
       <table class="leaderboard-table">
         <thead>
           <tr>
@@ -886,131 +897,9 @@
             <th>Wk 3</th>
             <th>Wk 4</th>
             <th>Total</th>
-            <th>Trend</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td class="rank rank-1">🥇</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">MR</div>
-                <span class="player-name">Marco R.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-attended" title="Attended"></span>
-                <span class="session-attended" title="Attended"></span>
-                <span class="session-attended" title="Attended"></span>
-                <span class="session-missed" title="Missed"></span>
-              </div>
-            </td>
-            <td>14</td><td>12</td><td>11</td><td>—</td>
-            <td class="total-pts">37</td>
-            <td><span class="trend up">▲ 4</span></td>
-          </tr>
-          <tr>
-            <td class="rank rank-2">🥈</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">AS</div>
-                <span class="player-name">Ana S.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-missed"></span>
-              </div>
-            </td>
-            <td>13</td><td>10</td><td>13</td><td>—</td>
-            <td class="total-pts">36</td>
-            <td><span class="trend up">▲ 2</span></td>
-          </tr>
-          <tr>
-            <td class="rank rank-3">🥉</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">JL</div>
-                <span class="player-name">James L.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-attended"></span>
-                <span class="session-dropped" title="Counted but dropped"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-              </div>
-            </td>
-            <td>11</td><td style="color:var(--gray);opacity:0.5;"><s>6</s></td><td>12</td><td>9</td>
-            <td class="total-pts">32</td>
-            <td><span class="trend flat">— 0</span></td>
-          </tr>
-          <tr>
-            <td class="rank">4</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">KW</div>
-                <span class="player-name">Kim W.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-              </div>
-            </td>
-            <td>9</td><td>10</td><td>8</td><td>11</td>
-            <td class="total-pts">30</td>
-            <td><span class="trend up">▲ 1</span></td>
-          </tr>
-          <tr>
-            <td class="rank">5</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">DM</div>
-                <span class="player-name">Dana M.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-missed"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-              </div>
-            </td>
-            <td>—</td><td>9</td><td>11</td><td>8</td>
-            <td class="total-pts">28</td>
-            <td><span class="trend down">▼ 3</span></td>
-          </tr>
-          <tr>
-            <td class="rank">6</td>
-            <td>
-              <div class="player-cell">
-                <div class="player-avatar">TC</div>
-                <span class="player-name">Tom C.</span>
-              </div>
-            </td>
-            <td>
-              <div class="sessions-cell">
-                <span class="session-attended"></span>
-                <span class="session-attended"></span>
-                <span class="session-missed"></span>
-                <span class="session-attended"></span>
-              </div>
-            </td>
-            <td>8</td><td>7</td><td>—</td><td>10</td>
-            <td class="total-pts">25</td>
-            <td><span class="trend up">▲ 5</span></td>
-          </tr>
-        </tbody>
+        <tbody id="leaderboard-body"></tbody>
       </table>
     </div>
 
@@ -1069,7 +958,15 @@
 </footer>
 
 <script>
-  // Live clock — ticks every second
+  // ── CONFIG: paste your published Google Sheet CSV URL here ──────────────────
+  // Steps:
+  //   1. Open your Google Sheet
+  //   2. File → Share → Publish to web → select Sheet1 → CSV → Publish
+  //   3. Copy the URL and replace the string below
+  const SHEET_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+  // ────────────────────────────────────────────────────────────────────────────
+
+  // ── LIVE CLOCK ──────────────────────────────────────────────────────────────
   const clockEl = document.getElementById('live-clock');
   function updateClock() {
     const now = new Date();
@@ -1081,7 +978,130 @@
   updateClock();
   setInterval(updateClock, 1000);
 
-  // Month selector tabs
+  // ── CSV PARSER ───────────────────────────────────────────────────────────────
+  function parseCSV(text) {
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+    return lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = vals[i] || '');
+      return obj;
+    });
+  }
+
+  // ── SCORING: best 3 of 4, drop worst ────────────────────────────────────────
+  function calcPlayer(p) {
+    const weeks = ['wk1', 'wk2', 'wk3', 'wk4'].map(k => {
+      const v = parseFloat(p[k]);
+      return isNaN(v) ? null : v;
+    });
+    const attended = weeks
+      .map((v, idx) => v !== null ? { v, idx } : null)
+      .filter(Boolean);
+    let droppedIdx = -1;
+    if (attended.length >= 4) {
+      const minEntry = attended.reduce((a, b) => b.v < a.v ? b : a);
+      droppedIdx = minEntry.idx;
+    }
+    const countable = weeks.filter((v, idx) => v !== null && idx !== droppedIdx);
+    const total = countable.reduce((s, v) => s + v, 0);
+    return { weeks, droppedIdx, total };
+  }
+
+  // ── RENDER ───────────────────────────────────────────────────────────────────
+  function renderLeaderboard(players) {
+    const rankIcons = ['🥇', '🥈', '🥉'];
+    const data = players
+      .filter(p => p.name && p.name.trim())
+      .map(p => ({ ...p, ...calcPlayer(p) }))
+      .sort((a, b) => b.total - a.total);
+
+    if (data.length === 0) {
+      showStatus('No players found. Make sure your sheet has a <strong>name</strong> column.');
+      return;
+    }
+
+    const tbody = document.getElementById('leaderboard-body');
+    tbody.innerHTML = data.map((p, i) => {
+      const initials = p.name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const rankLabel = i < 3 ? rankIcons[i] : (i + 1);
+      const rankClass = i < 3 ? `rank rank-${i + 1}` : 'rank';
+
+      const dots = p.weeks.map((v, idx) => {
+        if (v === null) return `<span class="session-missed" title="Missed"></span>`;
+        if (idx === p.droppedIdx) return `<span class="session-dropped" title="Dropped — worst week"></span>`;
+        return `<span class="session-attended" title="${v} pts"></span>`;
+      }).join('');
+
+      const cells = p.weeks.map((v, idx) => {
+        if (v === null) return `<td style="color:var(--gray)">—</td>`;
+        if (idx === p.droppedIdx) return `<td style="color:var(--gray);opacity:0.5;"><s>${v}</s></td>`;
+        return `<td>${v}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="${rankClass}">${rankLabel}</td>
+          <td>
+            <div class="player-cell">
+              <div class="player-avatar">${initials}</div>
+              <span class="player-name">${p.name}</span>
+            </div>
+          </td>
+          <td><div class="sessions-cell">${dots}</div></td>
+          ${cells}
+          <td class="total-pts">${p.total}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('leaderboard-status').style.display = 'none';
+    document.getElementById('leaderboard-wrap').style.display = '';
+    updateClock();
+  }
+
+  // ── STATUS / ERROR STATES ────────────────────────────────────────────────────
+  function showStatus(msg, isError = false) {
+    const el = document.getElementById('leaderboard-status');
+    el.style.display = '';
+    el.innerHTML = `<div style="padding:2rem;text-align:center;color:${isError ? '#fca5a5' : 'var(--gray)'};">${msg}</div>`;
+  }
+
+  // ── FETCH ────────────────────────────────────────────────────────────────────
+  async function fetchLeaderboard() {
+    if (SHEET_URL === 'YOUR_GOOGLE_SHEET_CSV_URL_HERE') {
+      showStatus(`
+        <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:1.5rem;max-width:520px;margin:0 auto;text-align:left;">
+          <div style="font-weight:800;color:var(--gold);margin-bottom:0.75rem;">📋 Connect your Google Sheet</div>
+          <ol style="padding-left:1.2rem;line-height:2;font-size:0.88rem;">
+            <li>Create a Google Sheet with columns: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">name, wk1, wk2, wk3, wk4</code></li>
+            <li>Add one player per row — leave blank if they missed a week</li>
+            <li>File → Share → <strong>Publish to web</strong> → Sheet1 → CSV → Publish</li>
+            <li>Copy the URL and replace <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_GOOGLE_SHEET_CSV_URL_HERE</code> in <code>index.html</code></li>
+          </ol>
+        </div>
+      `);
+      return;
+    }
+
+    showStatus(`<div style="display:inline-flex;align-items:center;gap:0.6rem;"><span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);border-top-color:transparent;display:inline-block;animation:spin 0.8s linear infinite;"></span>Loading…</div>`);
+
+    try {
+      const res = await fetch(`${SHEET_URL}&cachebust=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      renderLeaderboard(parseCSV(text));
+    } catch (e) {
+      showStatus(`Could not load data from Google Sheets.<br><small style="opacity:0.6;">${e.message}</small>`, true);
+    }
+  }
+
+  // Initial fetch + auto-refresh every 60 seconds
+  fetchLeaderboard();
+  setInterval(fetchLeaderboard, 60000);
+
+  // ── MONTH TABS ───────────────────────────────────────────────────────────────
   document.querySelectorAll('.month-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
@@ -1089,7 +1109,7 @@
     });
   });
 
-  // Intersection observer for fade-up
+  // ── FADE-UP ON SCROLL ────────────────────────────────────────────────────────
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
