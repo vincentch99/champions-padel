@@ -454,21 +454,74 @@
 
     .player-name {
       font-weight: 700;
+      font-size: 0.88rem;
+      line-height: 1.3;
     }
 
     .player-avatar {
-      width: 36px;
-      height: 36px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: var(--navy-light);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 0.82rem;
+      font-size: 0.68rem;
       color: var(--gold);
-      margin-right: 0.75rem;
       flex-shrink: 0;
+    }
+
+    .player-avatar.male  { border: 1px solid rgba(96,165,250,0.45); color: #93c5fd; }
+    .player-avatar.female { border: 1px solid rgba(244,114,182,0.45); color: #f9a8d4; }
+
+    .team-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .team-avatars {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .team-names {
+      display: flex;
+      flex-direction: column;
+      gap: 0.05rem;
+    }
+
+    .gender-tag {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 0.05rem 0.3rem;
+      border-radius: 3px;
+      margin-left: 0.25rem;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+
+    .gender-tag.male   { background: rgba(96,165,250,0.15); color: #93c5fd; }
+    .gender-tag.female { background: rgba(244,114,182,0.15); color: #f9a8d4; }
+
+    .venue-row td {
+      padding: 0.4rem 1rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      background: rgba(245,200,66,0.04);
+      border-bottom: 1px solid rgba(245,200,66,0.15);
+    }
+
+    .venue-row td.venue-loc {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
 
     .player-cell {
@@ -695,7 +748,7 @@
   <div class="court-lines"></div>
   <div class="hero-badge">🎾 Every Sunday</div>
   <h1 class="fade-up">Champions<br /><span>Club</span></h1>
-  <p class="hero-sub fade-up">Fix Mix Sundays — rotate partners, compete for points, climb the monthly leaderboard.</p>
+  <p class="hero-sub fade-up">Fix Mix Sundays — one male, one female, fixed partners all month, new venue every week.</p>
   <div class="hero-cta fade-up">
     <a href="#leaderboard" class="btn btn-primary">View Leaderboard</a>
     <a href="#points" class="btn btn-outline">How Points Work</a>
@@ -724,9 +777,9 @@
     <p class="section-desc">Players rotate partners across several rounds — your individual performance is what counts, not who you're paired with.</p>
     <div class="format-grid">
       <div class="format-card fade-up">
-        <div class="format-icon">🔄</div>
-        <h3>Rotating Partners</h3>
-        <p>Each round you play with a different partner, so the playing field stays level and you get to mix with everyone on court.</p>
+        <div class="format-icon">👫</div>
+        <h3>Fixed Mixed Pairs</h3>
+        <p>Each team is one male and one female player, paired at the start of the month. Partners stay the same every Sunday — no swaps.</p>
       </div>
       <div class="format-card fade-up">
         <div class="format-icon">📊</div>
@@ -739,9 +792,9 @@
         <p>Weekly totals add up across the month. Your best 3 sessions count — one bad Sunday won't knock you out of the running.</p>
       </div>
       <div class="format-card fade-up">
-        <div class="format-icon">🤝</div>
-        <h3>Social First</h3>
-        <p>Competitive enough to care, relaxed enough to enjoy. New and returning players welcome every week.</p>
+        <div class="format-icon">📍</div>
+        <h3>New Venue Every Week</h3>
+        <p>Location changes each Sunday — different courts, different vibes. Check the leaderboard each week to see where you're playing.</p>
       </div>
     </div>
   </div>
@@ -890,7 +943,7 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Player</th>
+            <th>Team</th>
             <th>Sessions</th>
             <th>Wk 1</th>
             <th>Wk 2</th>
@@ -922,22 +975,22 @@
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-content">
-          <h4>Show Up Sunday</h4>
-          <p>You bank your 5 attendance points the moment you step on court. Every session counts toward your monthly total.</p>
+          <h4>Sign Up & Get Paired</h4>
+          <p>Register through Reclub and pay to confirm your spot. Once confirmed, you're matched into a mixed team (one male + one female) for the full month.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-content">
-          <h4>Play Your Rounds</h4>
-          <p>Partners rotate each round. Win games, earn points. The session winner (most games won that day) gets a bonus +3.</p>
+          <h4>Show Up Sunday</h4>
+          <p>Check the leaderboard for this week's venue — location changes every Sunday. Your team banks 5 attendance points just for being there.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-content">
-          <h4>Leaderboard Posted</h4>
-          <p>After each Sunday the updated standings go out on WhatsApp/Instagram so everyone can track the month in real time.</p>
+          <h4>Play & Earn Points</h4>
+          <p>Win games, earn points as a team. The session-winning team gets a bonus +3. Leaderboard updates after every Sunday.</p>
         </div>
       </div>
       <div class="step">
@@ -992,7 +1045,7 @@
   }
 
   // ── SCORING: best 3 of 4, drop worst ────────────────────────────────────────
-  function calcPlayer(p) {
+  function calcTeam(p) {
     const weeks = ['wk1', 'wk2', 'wk3', 'wk4'].map(k => {
       const v = parseFloat(p[k]);
       return isNaN(v) ? null : v;
@@ -1002,32 +1055,50 @@
       .filter(Boolean);
     let droppedIdx = -1;
     if (attended.length >= 4) {
-      const minEntry = attended.reduce((a, b) => b.v < a.v ? b : a);
-      droppedIdx = minEntry.idx;
+      droppedIdx = attended.reduce((a, b) => b.v < a.v ? b : a).idx;
     }
-    const countable = weeks.filter((v, idx) => v !== null && idx !== droppedIdx);
-    const total = countable.reduce((s, v) => s + v, 0);
+    const total = weeks.reduce((s, v, idx) => (v !== null && idx !== droppedIdx) ? s + v : s, 0);
     return { weeks, droppedIdx, total };
   }
 
+  function initials(name) {
+    return (name || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  }
+
   // ── RENDER ───────────────────────────────────────────────────────────────────
-  function renderLeaderboard(players) {
+  function renderLeaderboard(rows) {
+    // Separate LOCATION row from team rows
+    const locationRow = rows.find(r => (r.player1 || '').toUpperCase() === 'LOCATION');
+    const venues = locationRow
+      ? ['wk1','wk2','wk3','wk4'].map(k => locationRow[k] || '')
+      : ['','','',''];
+
     const rankIcons = ['🥇', '🥈', '🥉'];
-    const data = players
-      .filter(p => p.name && p.name.trim())
-      .map(p => ({ ...p, ...calcPlayer(p) }))
+    const data = rows
+      .filter(r => r.player1 && r.player1.trim() && r.player1.toUpperCase() !== 'LOCATION')
+      .map(p => ({ ...p, ...calcTeam(p) }))
       .sort((a, b) => b.total - a.total);
 
     if (data.length === 0) {
-      showStatus('No players found. Make sure your sheet has a <strong>name</strong> column.');
+      showStatus('No teams found. Make sure your sheet has <strong>player1</strong> and <strong>player2</strong> columns.');
       return;
     }
 
+    // Build venue sub-header row
+    const venueRow = venues.some(v => v)
+      ? `<tr class="venue-row">
+          <td colspan="3" style="color:var(--gray);font-size:0.7rem;letter-spacing:0.08em;">📍 VENUE</td>
+          ${venues.map(v => `<td class="venue-loc">${v ? '📍 ' + v : '—'}</td>`).join('')}
+          <td></td>
+        </tr>`
+      : '';
+
     const tbody = document.getElementById('leaderboard-body');
-    tbody.innerHTML = data.map((p, i) => {
-      const initials = p.name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    tbody.innerHTML = venueRow + data.map((p, i) => {
       const rankLabel = i < 3 ? rankIcons[i] : (i + 1);
       const rankClass = i < 3 ? `rank rank-${i + 1}` : 'rank';
+      const ini1 = initials(p.player1);
+      const ini2 = initials(p.player2);
 
       const dots = p.weeks.map((v, idx) => {
         if (v === null) return `<span class="session-missed" title="Missed"></span>`;
@@ -1045,9 +1116,15 @@
         <tr>
           <td class="${rankClass}">${rankLabel}</td>
           <td>
-            <div class="player-cell">
-              <div class="player-avatar">${initials}</div>
-              <span class="player-name">${p.name}</span>
+            <div class="team-cell">
+              <div class="team-avatars">
+                <div class="player-avatar male">${ini1}</div>
+                <div class="player-avatar female">${ini2}</div>
+              </div>
+              <div class="team-names">
+                <div class="player-name">${p.player1} <span class="gender-tag male">M</span></div>
+                <div class="player-name">${p.player2} <span class="gender-tag female">F</span></div>
+              </div>
             </div>
           </td>
           <td><div class="sessions-cell">${dots}</div></td>
@@ -1075,8 +1152,9 @@
         <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:1.5rem;max-width:520px;margin:0 auto;text-align:left;">
           <div style="font-weight:800;color:var(--gold);margin-bottom:0.75rem;">📋 Connect your Google Sheet</div>
           <ol style="padding-left:1.2rem;line-height:2;font-size:0.88rem;">
-            <li>Create a Google Sheet with columns: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">name, wk1, wk2, wk3, wk4</code></li>
-            <li>Add one player per row — leave blank if they missed a week</li>
+            <li>Create a Google Sheet with columns: <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">player1, player2, wk1, wk2, wk3, wk4</code></li>
+            <li>First data row: put <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">LOCATION</code> in player1, then each week's venue in wk1–wk4</li>
+            <li>Add one team per row — player1 = male, player2 = female. Leave wk blank if they missed.</li>
             <li>File → Share → <strong>Publish to web</strong> → Sheet1 → CSV → Publish</li>
             <li>Copy the URL and replace <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_GOOGLE_SHEET_CSV_URL_HERE</code> in <code>index.html</code></li>
           </ol>
