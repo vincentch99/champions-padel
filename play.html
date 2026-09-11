@@ -164,6 +164,34 @@
     }
     .score-edit:active { opacity: 0.5; }
 
+    /* ── Live score adj buttons ── */
+    .adj-btn {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.06);
+      color: var(--text); font-family: inherit; font-size: 20px; font-weight: 700;
+      cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.08s, transform 0.08s; flex-shrink: 0;
+    }
+    .adj-btn:active { transform: scale(0.88); background: rgba(255,255,255,0.18); }
+    .live-num {
+      font-size: 56px; font-weight: 900; min-width: 60px; text-align: center;
+      line-height: 1; font-variant-numeric: tabular-nums; transition: color 0.15s;
+    }
+    .live-score-col {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .live-team-name {
+      font-weight: 700; font-size: 14px; text-align: center;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 100%;
+    }
+    .live-team-sub {
+      font-size: 11px; color: var(--muted); text-align: center;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 100%;
+    }
+
     /* ── Toast ── */
     .toast {
       position: fixed; bottom: calc(28px + var(--safe-b)); left: 50%;
@@ -202,7 +230,12 @@ const KEY          = 'cc-team-americano';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let S = null;
-function load()    { try { S = JSON.parse(localStorage.getItem(KEY)); } catch(e) { S = null; } }
+function load() {
+  try {
+    S = JSON.parse(localStorage.getItem(KEY));
+    if (S && !S.gameMode) S.gameMode = 'americano'; // backward compat
+  } catch(e) { S = null; }
+}
 function persist() { localStorage.setItem(KEY, JSON.stringify(S)); }
 function wipe()    { localStorage.removeItem(KEY); S = null; }
 
@@ -219,54 +252,95 @@ function go(screen) {
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function homeHTML() {
   const has = !!S;
-  return `
-    <div style="text-align:center;padding:44px 0 28px;">
-      <div style="font-size:52px;margin-bottom:14px;">🎾</div>
-      <div class="h1" style="margin-bottom:8px;">Team Americano</div>
-      <div class="dim" style="max-width:300px;margin:0 auto;line-height:1.6;">
-        Fixed pairs · Round-robin · Every team plays every other team · Highest total wins
+  const modeCard = (icon, title, badge, badgeColor, desc, mode) => `
+    <button onclick="newSession('${mode}')"
+      style="display:block;width:100%;text-align:left;padding:18px 20px;
+             background:var(--surface);border:1px solid var(--border);border-radius:14px;
+             cursor:pointer;font-family:inherit;color:var(--text);
+             touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background 0.12s;"
+      onmouseover="this.style.background='var(--surface2)'"
+      onmouseout="this.style.background='var(--surface)'"
+      ontouchstart="this.style.background='var(--surface2)'"
+      ontouchend="this.style.background='var(--surface)'">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <span style="font-size:32px;line-height:1;">${icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:17px;font-weight:800;">${title}</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:${badgeColor};margin-top:2px;">${badge}</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;">→</span>
       </div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.55;">${desc}</div>
+    </button>`;
+
+  return `
+    <div style="text-align:center;padding:32px 0 24px;">
+      <div style="font-size:42px;margin-bottom:10px;">🎾</div>
+      <div class="h1" style="margin-bottom:6px;">Choose Game Mode</div>
+      <div class="dim">FIX MIX SUNDAYS · Padel Match Tracker</div>
     </div>
 
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
-      ${['👫 Fixed pairs','🔄 Round-robin','🎾 Tennis or Points','📊 Live standings'].map(l =>
-        `<span style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;color:var(--muted);">${l}</span>`
-      ).join('')}
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      ${modeCard('👫','Team Americano','Fixed pairs · Round-robin','var(--gold)',
+        'Set fixed male + female pairs. Every team plays every other team once. Highest total score wins.','americano')}
+      ${modeCard('🔥','Mexicano','Dynamic pairing · Ranking-based','var(--blue)',
+        'Players re-pair every round based on current standings. Top players face top players — everyone competes at their level.','mexicano')}
     </div>
 
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-gold btn-full" style="padding:15px;font-size:15px;" onclick="newSession()">+ New Session</button>
-      ${has ? `
+    ${has ? `
+      <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;flex-direction:column;gap:8px;">
+        <div class="lbl">Saved session · ${has && S.gameMode === 'mexicano' ? '🔥 Mexicano' : '👫 Americano'}</div>
         <button class="btn btn-outline btn-full" onclick="resume()">
-          ▶ Resume · ${S.teams.length} teams · Round ${S.currentRound+1}/${S.schedule.length}
-          · ${S.scoringMode === 'tennis' ? 'Bo'+S.setFormat : S.pointsPerMatch+'pts'}
+          ▶ Resume · ${S.gameMode==='mexicano' ? (S.players||[]).length+' players' : (S.teams||[]).length+' teams'}
+          · Round ${S.currentRound+1}/${S.schedule.length||'?'}
+          · ${S.scoringMode==='tennis' ? 'Bo'+S.setFormat : S.pointsPerMatch+'pts'}
         </button>
         <button class="btn btn-ghost btn-sm btn-full" style="color:var(--red);" onclick="confirmDiscard()">Discard session</button>
-      ` : ''}
-    </div>
-
-    <div style="margin-top:36px;">
-      <div class="lbl" style="margin-bottom:10px;">How it works</div>
-      ${['Set up fixed pairs (male + female)','Choose Tennis or Points scoring','Every team plays every other team once','Highest total score wins the session'].map((s,i) => `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-radius:8px;margin-bottom:6px;">
-          <span style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#0c0c0c;font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</span>
-          <span style="font-size:13px;">${s}</span>
-        </div>`).join('')}
-    </div>`;
+      </div>
+    ` : `
+      <div style="margin-top:8px;">
+        <div class="lbl" style="margin-bottom:10px;">How it works</div>
+        ${[
+          ['👫','Team Americano','Create fixed pairs → auto round-robin schedule → enter scores each round.'],
+          ['🔥','Mexicano','Add players → first round random pairs → re-ranked pairs every round after.'],
+          ['📊','Live Standings','Standings update as you enter scores. Jump to any round freely.'],
+        ].map(([ic,ttl,dsc]) => `
+          <div style="display:flex;gap:12px;padding:12px 14px;background:var(--surface);border-radius:10px;margin-bottom:6px;">
+            <span style="font-size:20px;flex-shrink:0;">${ic}</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${ttl}</div>
+              <div style="font-size:12px;color:var(--muted);">${dsc}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    `}`;
 }
 
-function newSession() {
-  S = {
-    scoringMode: 'tennis', setFormat: 3,
-    pointsPerMatch: 32, courts: 2,
-    teams: [
-      { id:'t1', name:'Team 1', p1:'', p2:'', color: COLORS[0] },
-      { id:'t2', name:'Team 2', p1:'', p2:'', color: COLORS[1] },
-      { id:'t3', name:'Team 3', p1:'', p2:'', color: COLORS[2] },
-      { id:'t4', name:'Team 4', p1:'', p2:'', color: COLORS[3] },
-    ],
-    schedule: [], currentRound: 0, status: 'setup',
-  };
+function newSession(mode) {
+  if (mode === 'mexicano') {
+    S = {
+      gameMode: 'mexicano',
+      scoringMode: 'points', pointsPerMatch: 24,
+      courts: 2, numRounds: 6,
+      players: Array.from({length:8}, (_,i) => ({
+        id:'p'+(i+1), name:'Player '+(i+1), color: COLORS[i % COLORS.length]
+      })),
+      schedule: [], currentRound: 0, status: 'setup',
+    };
+  } else {
+    S = {
+      gameMode: 'americano',
+      scoringMode: 'tennis', setFormat: 3,
+      pointsPerMatch: 32, courts: 2,
+      teams: [
+        { id:'t1', name:'Team 1', p1:'', p2:'', color: COLORS[0] },
+        { id:'t2', name:'Team 2', p1:'', p2:'', color: COLORS[1] },
+        { id:'t3', name:'Team 3', p1:'', p2:'', color: COLORS[2] },
+        { id:'t4', name:'Team 4', p1:'', p2:'', color: COLORS[3] },
+      ],
+      schedule: [], currentRound: 0, status: 'setup',
+    };
+  }
   go('setup');
 }
 
@@ -275,6 +349,9 @@ function confirmDiscard() { if (confirm('Discard the current session?')) { wipe(
 
 // ── SETUP ─────────────────────────────────────────────────────────────────────
 function setupHTML() {
+  return S.gameMode === 'mexicano' ? mexicanoSetupHTML() : americanoSetupHTML();
+}
+function americanoSetupHTML() {
   const { n, rounds, matchesPerRound, totalMatches } = scheduleInfo();
   const tennis = S.scoringMode === 'tennis';
 
@@ -462,13 +539,11 @@ function refreshInfo() {
 }
 
 function startSession() {
+  if (S.gameMode === 'mexicano') { startMexicanoSession(); return; }
   if (S.teams.length < 4) { toast('Need at least 4 teams'); return; }
-  try {
-    S.schedule = buildSchedule();
-  } catch(e) {
-    toast('Error building schedule: ' + e.message); console.error(e); return;
-  }
-  if (!S.schedule || S.schedule.length === 0) { toast('Schedule is empty — check team count'); return; }
+  try { S.schedule = buildSchedule(); }
+  catch(e) { toast('Error: ' + e.message); console.error(e); return; }
+  if (!S.schedule || !S.schedule.length) { toast('Schedule empty — check team count'); return; }
   S.currentRound = 0; S.status = 'playing';
   persist(); go('play');
 }
@@ -524,6 +599,237 @@ function buildSchedule() {
   return rounds;
 }
 
+// ── MEXICANO ──────────────────────────────────────────────────────────────────
+
+function mexicanoSetupHTML() {
+  const n = S.players.length;
+  const matchesPerRound = Math.floor(n / 4) * Math.min(1, S.courts); // courts bounded by matches
+  const actualCourts = Math.min(S.courts, Math.floor(n / 4));
+
+  return `
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span style="font-size:22px;">🔥</span>
+        <div class="h2">Mexicano Setup</div>
+      </div>
+      <div class="dim">Players re-pair each round based on current standings.</div>
+    </div>
+
+    <!-- Scoring -->
+    <div class="card" style="margin-bottom:10px;">
+      <div class="lbl" style="margin-bottom:10px;">Scoring format</div>
+      <div class="tg" id="mode-tg">
+        <button class="tg-btn ${S.scoringMode==='points'?'on':''}" onclick="setMode('points')">📍 Points</button>
+        <button class="tg-btn ${S.scoringMode==='tennis'?'on-blue':''}" onclick="setMode('tennis')">🎾 Tennis</button>
+      </div>
+      <div id="scoring-sub" style="margin-top:14px;">${scoringSubHTML(S.scoringMode==='tennis')}</div>
+    </div>
+
+    <!-- Courts -->
+    <div class="card" style="margin-bottom:10px;">
+      <div class="lbl" style="margin-bottom:10px;">Courts</div>
+      <div class="tg" id="courts-tg">
+        ${[1,2,3,4].map(c=>`<button class="tg-btn ${S.courts===c?'on':''}" onclick="setCourts(${c})">${c}</button>`).join('')}
+      </div>
+    </div>
+
+    <!-- Rounds -->
+    <div class="card" style="margin-bottom:10px;">
+      <div class="lbl" style="margin-bottom:10px;">Number of rounds</div>
+      <div class="tg" id="rounds-tg">
+        ${[4,6,8,10].map(r=>`<button class="tg-btn ${S.numRounds===r?'on':''}" onclick="setNumRounds(${r})">${r}</button>`).join('')}
+      </div>
+    </div>
+
+    <!-- Players -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="lbl">Players <span id="pc" style="color:var(--gold);margin-left:4px;">${n}</span>
+        ${n%4!==0 ? `<span style="color:var(--red);margin-left:6px;">· needs multiple of 4</span>` : ''}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="addPlayer()">+ Add</button>
+    </div>
+    <div id="players-list">${S.players.map(playerCardHTML).join('')}</div>
+
+    <!-- Summary -->
+    <div style="margin:16px 0 8px;">
+      <div class="info-box" id="mex-info">
+        <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Players</div></div>
+        <div class="info-cell"><div class="info-val">${actualCourts}</div><div class="info-key">Courts</div></div>
+        <div class="info-cell"><div class="info-val">${S.numRounds}</div><div class="info-key">Rounds</div></div>
+        <div class="info-cell"><div class="info-val">${S.numRounds * actualCourts}</div><div class="info-key">Total Matches</div></div>
+      </div>
+      <div class="dim" style="margin-top:8px;font-size:11px;" id="mex-note">
+        ${n%4!==0 ? '⚠ Add '+(4-n%4)+' more players (need multiple of 4)' : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round'}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" onclick="go('home')">← Back</button>
+      <button class="btn btn-gold" style="flex:1;" onclick="startSession()">Start Session →</button>
+    </div>`;
+}
+
+function playerCardHTML(p) {
+  return `
+    <div class="card" id="pc-${p.id}" style="border-left:3px solid ${p.color};margin-bottom:8px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+        <input class="inp inp-sm" style="flex:1;" value="${esc(p.name)}" placeholder="Player name"
+          oninput="updPlayer('${p.id}','name',this.value)">
+        ${S.players.length > 4 ? `<button class="btn btn-danger btn-sm" onclick="removePlayer('${p.id}')">✕</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function addPlayer() {
+  if (S.players.length >= 20) { toast('Maximum 20 players'); return; }
+  const idx = S.players.length;
+  const id  = 'p' + Date.now();
+  S.players.push({ id, name:'Player '+(idx+1), color: COLORS[idx % COLORS.length] });
+  const li = document.getElementById('players-list');
+  const d  = document.createElement('div');
+  d.innerHTML = playerCardHTML(S.players[S.players.length-1]);
+  li.appendChild(d.firstElementChild);
+  refreshMexInfo();
+}
+
+function removePlayer(id) {
+  if (S.players.length <= 4) { toast('Minimum 4 players'); return; }
+  S.players = S.players.filter(p => p.id !== id);
+  document.getElementById('pc-'+id)?.remove();
+  refreshMexInfo();
+}
+
+function updPlayer(id, key, val) {
+  const p = S.players.find(p => p.id === id);
+  if (p) p[key] = val;
+}
+
+function setNumRounds(n) {
+  S.numRounds = n;
+  document.querySelectorAll('#rounds-tg .tg-btn').forEach(b =>
+    b.classList.toggle('on', parseInt(b.textContent) === n));
+  refreshMexInfo();
+}
+
+function refreshMexInfo() {
+  const n = S.players.length;
+  const courts = Math.min(S.courts, Math.floor(n/4));
+  const ib = document.getElementById('mex-info');
+  const note = document.getElementById('mex-note');
+  const pc = document.getElementById('pc');
+  if (pc) pc.textContent = n;
+  if (ib) ib.innerHTML = `
+    <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Players</div></div>
+    <div class="info-cell"><div class="info-val">${courts}</div><div class="info-key">Courts</div></div>
+    <div class="info-cell"><div class="info-val">${S.numRounds}</div><div class="info-key">Rounds</div></div>
+    <div class="info-cell"><div class="info-val">${S.numRounds*courts}</div><div class="info-key">Total Matches</div></div>`;
+  if (note) note.textContent = n%4!==0
+    ? '⚠ Add '+(4-n%4)+' more players (need multiple of 4)'
+    : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round';
+}
+
+function startMexicanoSession() {
+  if (S.players.length < 4)         { toast('Need at least 4 players'); return; }
+  if (S.players.length % 4 !== 0)   { toast('Players must be a multiple of 4'); return; }
+  const firstRound = buildMexicanoRound(0, shuffleIds(S.players.map(p=>p.id)));
+  S.schedule = [firstRound];
+  S.currentRound = 0; S.status = 'playing';
+  persist(); go('play');
+}
+
+function shuffleIds(ids) {
+  const a = [...ids];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildMexicanoRound(roundIdx, playerOrder) {
+  const matches = [];
+  const courts  = Math.min(S.courts, Math.floor(playerOrder.length/4));
+  for (let i = 0; i < courts; i++) {
+    const base = i * 4;
+    matches.push({
+      id: `mx_r${roundIdx}_${i}`, court: i+1,
+      playerA1: playerOrder[base],   playerA2: playerOrder[base+1],
+      playerB1: playerOrder[base+2], playerB2: playerOrder[base+3],
+      scoreA: null, scoreB: null, setsA: null, setsB: null, done: false,
+    });
+  }
+  return matches;
+}
+
+function mexicanoNextRound() {
+  if (!S.schedule[S.currentRound].every(m=>m.done)) { toast('Complete all matches first'); return; }
+  if (S.schedule.length >= S.numRounds) { S.status='finished'; persist(); go('final'); return; }
+  const st = mexicanoStandings();
+  const order = st.map(s=>s.id);
+  const next = buildMexicanoRound(S.schedule.length, order);
+  S.schedule.push(next);
+  S.currentRound = S.schedule.length - 1;
+  persist(); go('play');
+}
+
+function mexPlayer(id) {
+  return (S.players||[]).find(p=>p.id===id) || { id, name:'?', color:'#888' };
+}
+
+function mexicanoTeamBlock(p1id, p2id, align) {
+  const p1 = mexPlayer(p1id), p2 = mexPlayer(p2id);
+  const right = align === 'right';
+  return `
+    <div style="text-align:${align};min-width:0;">
+      <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p1.color};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>${p1.name}
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p2.color};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>${p2.name}
+      </div>
+    </div>`;
+}
+
+function mexicanoMatchCardHTML(m) {
+  const p1 = mexPlayer(m.playerA1), p2 = mexPlayer(m.playerA2);
+  const p3 = mexPlayer(m.playerB1), p4 = mexPlayer(m.playerB2);
+  const labelA = p1.name + ' & ' + p2.name;
+  const labelB = p3.name + ' & ' + p4.name;
+  return liveScoreCardHTML(m, labelA, '', p1.color, labelB, '', p3.color);
+}
+
+function mexicanoStandings() {
+  const map = {};
+  (S.players||[]).forEach(p => { map[p.id] = { id:p.id, pts:0, sw:0, sl:0, w:0, l:0, played:0 }; });
+  S.schedule.forEach(r => r.forEach(m => {
+    if (!m.done) return;
+    const tennis = S.scoringMode === 'tennis';
+    const sA = tennis ? m.setsA : m.scoreA;
+    const sB = tennis ? m.setsB : m.scoreB;
+    const winA = sA > sB;
+    [m.playerA1, m.playerA2].forEach(pid => {
+      if (!map[pid]) return;
+      if (tennis) { map[pid].sw += sA; map[pid].sl += sB; }
+      else { map[pid].pts += sA; }
+      map[pid].played++;
+      if (winA) map[pid].w++; else map[pid].l++;
+    });
+    [m.playerB1, m.playerB2].forEach(pid => {
+      if (!map[pid]) return;
+      if (tennis) { map[pid].sw += sB; map[pid].sl += sA; }
+      else { map[pid].pts += sB; }
+      map[pid].played++;
+      if (!winA) map[pid].w++; else map[pid].l++;
+    });
+  }));
+  return Object.values(map).sort((a,b) =>
+    S.scoringMode==='tennis'
+      ? (b.sw-b.sl)-(a.sw-a.sl) || b.sw-a.sw || b.w-a.w
+      : b.pts-a.pts || b.w-a.w
+  );
+}
+
 // ── PLAY ──────────────────────────────────────────────────────────────────────
 function playHTML() {
   const round   = S.schedule[S.currentRound];
@@ -533,6 +839,7 @@ function playHTML() {
   const totalMatches = S.schedule.reduce((s,r) => s + r.length, 0);
   const allDone = totalDone === totalMatches;
   const prog = Math.round((totalDone / totalMatches) * 100);
+  const st = standings();
 
   return `
     <!-- Header -->
@@ -572,9 +879,11 @@ function playHTML() {
         const d   = r.every(m => m.done);
         const cur = i === S.currentRound;
         const partial = r.some(m=>m.done) && !d;
-        return `<button onclick="jumpRound(${i})"
+        const accessible = S.gameMode === 'mexicano' ? (d || cur) : true;
+        return `<button ${accessible ? `onclick="jumpRound(${i})"` : 'disabled'}
           style="flex-shrink:0;min-height:36px;padding:6px 14px;border-radius:20px;
-                 font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+                 font-size:13px;font-weight:700;font-family:inherit;
+                 cursor:${accessible?'pointer':'default'};opacity:${accessible?1:0.35};
                  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
                  border:1px solid ${cur?'var(--gold)':d?'var(--green)':partial?'rgba(96,165,250,0.4)':'var(--border)'};
                  background:${cur?'var(--gold)':d?'rgba(74,222,128,0.1)':partial?'rgba(96,165,250,0.08)':'transparent'};
@@ -582,28 +891,106 @@ function playHTML() {
           R${i+1}${d?' ✓':''}
         </button>`;
       }).join('')}
+      ${S.gameMode==='mexicano' && S.schedule.length < S.numRounds && S.schedule[S.schedule.length-1].every(m=>m.done)
+        ? `<span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;color:var(--muted);border:1px dashed var(--border);display:flex;align-items:center;">
+             R${S.schedule.length+1}…
+           </span>`
+        : ''}
     </div>
 
     <!-- Current round matches -->
-    <div class="lbl" style="margin-bottom:10px;">
-      Round ${S.currentRound+1}
-      <span style="color:var(--text);"> · ${round.filter(m=>m.done).length}/${round.length} done</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="lbl">
+        Round ${S.currentRound+1}
+        ${S.gameMode==='mexicano' ? `<span style="color:var(--muted);"> of ${S.numRounds}</span>` : `<span style="color:var(--muted);"> of ${S.schedule.length}</span>`}
+        <span style="color:var(--text);"> · ${round.filter(m=>m.done).length}/${round.length} done</span>
+      </div>
+      <!-- Prev / Next round nav -->
+      <div style="display:flex;gap:6px;">
+        <button onclick="jumpRound(${S.currentRound-1})"
+          ${S.currentRound===0 ? 'disabled' : ''}
+          style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
+                 font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                 border:1px solid var(--border);background:transparent;
+                 color:${S.currentRound===0?'var(--border)':'var(--text)'};
+                 cursor:${S.currentRound===0?'default':'pointer'};">← Prev</button>
+        ${(() => {
+          const roundDone = round.every(m => m.done);
+          const hasNext = S.gameMode === 'mexicano'
+            ? S.currentRound < S.schedule.length - 1
+            : S.currentRound < S.schedule.length - 1;
+          if (hasNext) return `<button onclick="jumpRound(${S.currentRound+1})"
+            ${S.gameMode==='mexicano' && !S.schedule[S.currentRound+1] ? 'disabled' : ''}
+            style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
+                   font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                   border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">Next →</button>`;
+          if (S.gameMode === 'mexicano' && roundDone && S.schedule.length < S.numRounds)
+            return `<button onclick="mexicanoNextRound()"
+              style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
+                     font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                     border:1px solid var(--gold);background:var(--gold);color:#0c0c0c;cursor:pointer;">Next →</button>`;
+          return `<button disabled
+            style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
+                   font-family:inherit;border:1px solid var(--border);background:transparent;
+                   color:var(--border);cursor:default;">Next →</button>`;
+        })()}
+      </div>
     </div>
     <div id="matches">${round.map(m => matchCardHTML(m)).join('')}</div>
 
     <!-- Finish button -->
     <div style="margin-top:16px;">
-      ${allDone
-        ? `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`
-        : `<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px;">
-             ${totalMatches - totalDone} match${totalMatches-totalDone!==1?'es':''} remaining
-           </div>`}
+      ${(() => {
+        const roundDone = round.every(m => m.done);
+        if (S.gameMode === 'mexicano') {
+          if (S.schedule.length >= S.numRounds && S.currentRound === S.schedule.length - 1 && roundDone)
+            return `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`;
+          return '';
+        }
+        return allDone
+          ? `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`
+          : '';
+      })()}
     </div>
 
     <!-- Live standings -->
     <div style="margin-top:24px;">
       <div class="lbl" style="margin-bottom:8px;">Live Standings</div>
-      <div class="card tbl-wrap" style="padding:0;">
+      ${S.gameMode === 'mexicano' ? (() => {
+        const mst = mexicanoStandings();
+        const tennis2 = S.scoringMode === 'tennis';
+        return `<div class="card tbl-wrap" style="padding:0;">
+          <table class="tbl">
+            <thead><tr>
+              <th>#</th><th>Player</th>
+              ${tennis2 ? '<th>W</th><th>SW</th><th>SL</th>' : '<th>Pts</th><th>W</th><th>L</th>'}
+            </tr></thead>
+            <tbody>
+              ${mst.map((s,i) => {
+                const p = mexPlayer(s.id);
+                const leading = tennis2 ? s.w > 0 : s.pts > 0;
+                return `<tr class="${i===0&&leading?'gold-row':''}">
+                  <td style="color:var(--muted);width:24px;font-size:12px;">${i+1}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:7px;">
+                      <div style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+                      <div style="font-weight:600;font-size:13px;">${p.name}</div>
+                    </div>
+                  </td>
+                  ${tennis2
+                    ? `<td style="font-weight:800;color:${i===0&&s.w>0?'var(--gold)':''};">${s.w}</td>
+                       <td style="color:var(--blue);">${s.sw}</td>
+                       <td style="color:var(--muted);font-size:12px;">${s.sl}</td>`
+                    : `<td style="font-weight:800;color:${i===0&&s.pts>0?'var(--gold)':''};">${s.pts}</td>
+                       <td style="color:var(--green);font-size:12px;">${s.w}</td>
+                       <td style="color:var(--muted);font-size:12px;">${s.l}</td>`}
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${tennis2 ? `<div class="dim" style="margin-top:6px;font-size:11px;padding:0 4px;">W = Match Wins · SW = Sets Won · SL = Sets Lost</div>` : ''}`;
+      })() : `<div class="card tbl-wrap" style="padding:0;">
         <table class="tbl">
           <thead><tr>
             <th>#</th><th>Team</th>
@@ -637,12 +1024,13 @@ function playHTML() {
           </tbody>
         </table>
       </div>
-      ${tennis ? `<div class="dim" style="margin-top:6px;font-size:11px;padding:0 4px;">MW = Matches Won · SW = Sets Won · SL = Sets Lost</div>` : ''}
+      ${tennis ? `<div class="dim" style="margin-top:6px;font-size:11px;padding:0 4px;">MW = Matches Won · SW = Sets Won · SL = Sets Lost</div>` : ''}`}
     </div>`;
 }
 
 // ── Match cards ────────────────────────────────────────────────────────────────
 function matchCardHTML(m) {
+  if (S.gameMode === 'mexicano') return mexicanoMatchCardHTML(m);
   return S.scoringMode === 'tennis' ? tennisCardHTML(m) : pointsCardHTML(m);
 }
 
@@ -666,145 +1054,169 @@ function teamBlock(t, align) {
     </div>`;
 }
 
-// Points card
+// ── Universal live scoreboard card ───────────────────────────────────────────
+function liveScoreCardHTML(m, labelA, subtA, colorA, labelB, subtB, colorB) {
+  const tennis = S.scoringMode === 'tennis';
+  const toWin  = Math.ceil((S.setFormat || 3) / 2);
+  const sA = tennis ? (m.setsA  || 0) : (m.scoreA || 0);
+  const sB = tennis ? (m.setsB  || 0) : (m.scoreB || 0);
+  const aWins = sA > sB, bWins = sB > sA;
+
+  // ── Done state ──
+  if (m.done) {
+    return `
+      <div class="card" id="card-${m.id}" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+          ${courtBadge(m)}
+          <span style="font-size:11px;color:var(--green);font-weight:700;">✓ Done</span>
+          <button onclick="editMatch('${m.id}')"
+            style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:6px;
+                   padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit;
+                   touch-action:manipulation;">✎ Edit</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <div class="live-score-col" style="opacity:${aWins?1:0.45};">
+            <div class="live-team-name" style="color:${aWins?colorA:'var(--muted)'};">${labelA}</div>
+            ${subtA ? `<div class="live-team-sub">${subtA}</div>` : ''}
+            <div class="live-num" style="margin-top:8px;color:${aWins?colorA:'var(--muted)'};">${sA}</div>
+          </div>
+          <div style="font-size:28px;font-weight:700;color:var(--muted);padding-bottom:4px;">:</div>
+          <div class="live-score-col" style="opacity:${bWins?1:0.45};">
+            <div class="live-team-name" style="color:${bWins?colorB:'var(--muted)'};">${labelB}</div>
+            ${subtB ? `<div class="live-team-sub">${subtB}</div>` : ''}
+            <div class="live-num" style="margin-top:8px;color:${bWins?colorB:'var(--muted)'};">${sB}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── Active / live state ──
+  const hint  = tennis ? `${S.setFormat} games total` : `Play to ${S.pointsPerMatch} pts`;
+  const total = tennis ? (S.setFormat || 3) : (S.pointsPerMatch || 32);
+  const pct   = Math.round(((sA+sB)/total)*100);
+  const numColorA = aWins ? colorA : bWins ? 'var(--muted)' : 'var(--text)';
+  const numColorB = bWins ? colorB : aWins ? 'var(--muted)' : 'var(--text)';
+
+  return `
+    <div class="card" id="card-${m.id}" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+        ${courtBadge(m)}
+        <span class="dim" style="font-size:11px;">${hint}</span>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <!-- Team A -->
+        <div class="live-score-col">
+          <div class="live-team-name">${labelA}</div>
+          ${subtA ? `<div class="live-team-sub">${subtA}</div>` : ''}
+          <div style="margin-top:10px;">
+            <button class="adj-btn" onclick="adj('${m.id}','A',1)">▲</button>
+          </div>
+          <div class="live-num" id="sa-${m.id}" style="color:${numColorA};">${sA}</div>
+          <button class="adj-btn" onclick="adj('${m.id}','A',-1)">▼</button>
+        </div>
+
+        <!-- divider -->
+        <div style="font-size:28px;font-weight:700;color:var(--muted);padding-top:52px;">:</div>
+
+        <!-- Team B -->
+        <div class="live-score-col">
+          <div class="live-team-name">${labelB}</div>
+          ${subtB ? `<div class="live-team-sub">${subtB}</div>` : ''}
+          <div style="margin-top:10px;">
+            <button class="adj-btn" onclick="adj('${m.id}','B',1)">▲</button>
+          </div>
+          <div class="live-num" id="sb-${m.id}" style="color:${numColorB};">${sB}</div>
+          <button class="adj-btn" onclick="adj('${m.id}','B',-1)">▼</button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;">
+          <span style="color:var(--muted);">${tennis ? 'Games' : 'Total'}</span>
+          <span id="prog-txt-${m.id}" style="font-weight:700;color:${sA+sB===total?'var(--green)':'var(--text)'};">${sA+sB} / ${total}</span>
+        </div>
+        <div class="prog" style="margin:0;">
+          <div class="prog-fill" id="prog-${m.id}" style="width:${pct}%;background:${sA+sB===total?'var(--green)':'var(--gold)'};"></div>
+        </div>
+        ${sA+sB>0 && sA+sB<total ? `
+          <button class="btn btn-outline btn-full" style="margin-top:12px;font-size:13px;" onclick="confirmScore('${m.id}')">✓ Confirm Score</button>
+        ` : ''}
+      </div>
+    </div>`;
+}
+
 function pointsCardHTML(m) {
   const tA = team(m.teamA), tB = team(m.teamB);
-
-  if (m.done) {
-    const winA = m.scoreA > m.scoreB;
-    return `
-      <div class="card" style="margin-bottom:10px;opacity:0.75;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          ${courtBadge(m)}
-          <span style="font-size:11px;color:var(--green);font-weight:700;">✓ Done</span>
-          <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap score to edit</span>
-        </div>
-        <div class="match-teams">
-          ${teamBlock(tA,'left')}
-          <div class="match-score-block">
-            <div class="score-edit" onclick="editMatch('${m.id}')"
-              style="font-size:32px;font-weight:800;color:${winA?tA.color:'var(--text)'};">${m.scoreA}</div>
-            <div style="color:var(--muted);font-size:16px;margin:0 2px;">–</div>
-            <div class="score-edit" onclick="editMatch('${m.id}')"
-              style="font-size:32px;font-weight:800;color:${!winA?tB.color:'var(--text)'};">${m.scoreB}</div>
-          </div>
-          ${teamBlock(tB,'right')}
-        </div>
-      </div>`;
-  }
-
-  return `
-    <div class="card" style="margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        ${courtBadge(m)}
-        <span class="dim" style="font-size:11px;">Play to ${S.pointsPerMatch} pts</span>
-      </div>
-      <div class="match-teams" style="margin-bottom:16px;">
-        ${teamBlock(tA,'left')}
-        <div class="match-score-block">
-          <input type="number" inputmode="numeric" class="score-inp" id="sA-${m.id}"
-            min="0" max="${S.pointsPerMatch}" placeholder="0"
-            oninput="autoFill('${m.id}','A',this.value)">
-          <span style="color:var(--muted);font-size:18px;margin:0 2px;">:</span>
-          <input type="number" inputmode="numeric" class="score-inp" id="sB-${m.id}"
-            min="0" max="${S.pointsPerMatch}" placeholder="0"
-            oninput="autoFill('${m.id}','B',this.value)">
-        </div>
-        ${teamBlock(tB,'right')}
-      </div>
-      <button class="btn btn-gold btn-full" onclick="submitPoints('${m.id}')">Submit Score</button>
-    </div>`;
+  return liveScoreCardHTML(m, tA.name, pname(tA), tA.color, tB.name, pname(tB), tB.color);
 }
 
-function autoFill(id, side, val) {
-  const n = parseInt(val);
-  if (isNaN(n)) return;
-  const el = document.getElementById(side === 'A' ? `sB-${id}` : `sA-${id}`);
-  if (el && el.value === '') el.value = Math.max(0, S.pointsPerMatch - n);
-}
-
-function submitPoints(id) {
-  const sA = parseInt(document.getElementById('sA-'+id)?.value);
-  const sB = parseInt(document.getElementById('sB-'+id)?.value);
-  if (isNaN(sA)||isNaN(sB))       { toast('Enter both scores'); return; }
-  if (sA<0||sB<0)                 { toast('Scores must be 0 or above'); return; }
-  if (sA+sB !== S.pointsPerMatch) { toast(`Scores must add up to ${S.pointsPerMatch}`); return; }
-  const m = findMatch(id); if (!m) return;
-  m.scoreA = sA; m.scoreB = sB; m.done = true;
-  persist(); go('play');
-}
-
-// Tennis card — tap the final outcome button
 function tennisCardHTML(m) {
-  const tA    = team(m.teamA), tB = team(m.teamB);
-  const toWin = Math.ceil(S.setFormat / 2);
-
-  if (m.done) {
-    const winA = m.setsA > m.setsB;
-    return `
-      <div class="card" style="margin-bottom:10px;opacity:0.75;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          ${courtBadge(m)}
-          <span style="font-size:11px;color:var(--green);font-weight:700;">✓ Done</span>
-          <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap score to edit</span>
-        </div>
-        <div class="match-teams">
-          ${teamBlock(tA,'left')}
-          <div onclick="editMatch('${m.id}')" class="score-edit"
-            style="font-size:30px;font-weight:800;text-align:center;padding:4px 8px;">
-            <span style="color:${winA?tA.color:'var(--text)'};">${m.setsA}</span>
-            <span style="color:var(--muted);font-size:18px;margin:0 3px;">–</span>
-            <span style="color:${!winA?tB.color:'var(--text)'};">${m.setsB}</span>
-          </div>
-          ${teamBlock(tB,'right')}
-        </div>
-      </div>`;
-  }
-
-  // All sets always played — scores sum to setFormat
-  const outcomes = [];
-  for (let w = toWin; w <= S.setFormat; w++) outcomes.push({ w, l: S.setFormat - w });
-
-  const outcomeBtn = (sA, sB, label) =>
-    `<button class="outcome-btn" onclick="selectOutcome('${m.id}',${sA},${sB})">${label}</button>`;
-
-  return `
-    <div class="card" style="margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        ${courtBadge(m)}
-        <span class="dim" style="font-size:11px;">All ${S.setFormat} sets · most wins</span>
-      </div>
-
-      <div class="match-teams" style="margin-bottom:18px;">
-        ${teamBlock(tA,'left')}
-        <span style="color:var(--muted);font-size:12px;">vs</span>
-        ${teamBlock(tB,'right')}
-      </div>
-
-      <!-- Team A wins -->
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
-                    color:${tA.color};margin-bottom:8px;">${tA.name} wins</div>
-        <div style="display:flex;gap:8px;">
-          ${outcomes.map(o => outcomeBtn(o.w, o.l, `${o.w}–${o.l}`)).join('')}
-        </div>
-      </div>
-
-      <!-- Team B wins -->
-      <div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
-                    color:${tB.color};margin-bottom:8px;">${tB.name} wins</div>
-        <div style="display:flex;gap:8px;">
-          ${outcomes.map(o => outcomeBtn(o.l, o.w, `${o.w}–${o.l}`)).join('')}
-        </div>
-      </div>
-    </div>`;
+  const tA = team(m.teamA), tB = team(m.teamB);
+  return liveScoreCardHTML(m, tA.name, pname(tA), tA.color, tB.name, pname(tB), tB.color);
 }
 
-function selectOutcome(id, setsA, setsB) {
+// ── Score adjustment (▲▼ buttons) ─────────────────────────────────────────────
+function adj(id, side, delta) {
   const m = findMatch(id); if (!m) return;
-  m.setsA = setsA; m.setsB = setsB; m.done = true;
-  persist(); go('play');
+  const tennis   = S.scoringMode === 'tennis';
+  const key      = side === 'A' ? (tennis ? 'setsA'  : 'scoreA') : (tennis ? 'setsB'  : 'scoreB');
+  const otherKey = side === 'A' ? (tennis ? 'setsB'  : 'scoreB') : (tennis ? 'setsA'  : 'scoreA');
+  const target   = tennis ? (S.setFormat || 3) : (S.pointsPerMatch || 32);
+  const max      = target - (m[otherKey] || 0);
+
+  m[key] = Math.max(0, Math.min(max, (m[key] || 0) + delta));
+
+  const total = (m[tennis?'setsA':'scoreA']||0) + (m[tennis?'setsB':'scoreB']||0);
+  if (total === target) {
+    m.done = true; persist(); reRenderCard(id);
+  } else {
+    persist(); updateScoreDOM(id, m);
+  }
+}
+
+function updateScoreDOM(id, m) {
+  const tennis = S.scoringMode === 'tennis';
+  const sA = tennis ? (m.setsA||0) : (m.scoreA||0);
+  const sB = tennis ? (m.setsB||0) : (m.scoreB||0);
+  const aWins = sA > sB, bWins = sB > sA;
+
+  let colorA, colorB;
+  if (S.gameMode === 'mexicano') {
+    colorA = mexPlayer(m.playerA1).color; colorB = mexPlayer(m.playerB1).color;
+  } else {
+    colorA = team(m.teamA).color; colorB = team(m.teamB).color;
+  }
+
+  const elA = document.getElementById('sa-'+id);
+  const elB = document.getElementById('sb-'+id);
+  if (elA) { elA.textContent = sA; elA.style.color = aWins?colorA:bWins?'var(--muted)':'var(--text)'; }
+  if (elB) { elB.textContent = sB; elB.style.color = bWins?colorB:aWins?'var(--muted)':'var(--text)'; }
+
+  const target = tennis ? (S.setFormat||3) : (S.pointsPerMatch||32);
+  const pct    = Math.round(((sA+sB)/target)*100);
+  const done   = sA+sB === target;
+  const pEl    = document.getElementById('prog-'+id);
+  const tEl    = document.getElementById('prog-txt-'+id);
+  if (pEl) { pEl.style.width = pct+'%'; pEl.style.background = done ? 'var(--green)' : 'var(--gold)'; }
+  if (tEl) { tEl.textContent = (sA+sB)+' / '+target; tEl.style.color = done ? 'var(--green)' : 'var(--text)'; }
+  if (sA+sB>0 && sA+sB<target && !document.getElementById('confirm-'+id)) reRenderCard(id);
+}
+
+function reRenderCard(id) {
+  const el = document.getElementById('card-'+id);
+  if (!el) { go('play'); return; }
+  const m = findMatch(id); if (!m) return;
+  el.outerHTML = matchCardHTML(m);
+}
+
+function confirmScore(id) {
+  const m = findMatch(id); if (!m) return;
+  const tennis = S.scoringMode === 'tennis';
+  const sA = tennis ? (m.setsA||0) : (m.scoreA||0);
+  const sB = tennis ? (m.setsB||0) : (m.scoreB||0);
+  if (sA+sB === 0) { toast('Enter a score first'); return; }
+  m.done = true; persist(); reRenderCard(id);
 }
 
 function editMatch(id) {
@@ -828,11 +1240,80 @@ function finish() {
 
 // ── FINAL ─────────────────────────────────────────────────────────────────────
 function finalHTML() {
+  const tennis = S.scoringMode === 'tennis';
+  const medals = ['🥇','🥈','🥉'];
+
+  if (S.gameMode === 'mexicano') {
+    const mst = mexicanoStandings();
+    const wp  = mexPlayer(mst[0].id);
+    const sub = tennis ? `${mst[0].w} wins · ${mst[0].sw} sets` : `${mst[0].pts} points`;
+    return `
+      <div style="text-align:center;padding:36px 0 24px;">
+        <div style="font-size:52px;margin-bottom:14px;">🔥</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Mexicano Champion</div>
+        <div class="h1" style="color:var(--gold);">${wp.name}</div>
+        <div style="font-size:18px;font-weight:700;margin-top:10px;">${sub}</div>
+      </div>
+
+      <div class="lbl" style="margin-bottom:8px;">Final Standings</div>
+      <div class="card tbl-wrap" style="padding:0;margin-bottom:24px;">
+        <table class="tbl">
+          <thead><tr>
+            <th>#</th><th>Player</th>
+            ${tennis ? '<th>W–L</th><th>SW</th><th>SL</th><th>Diff</th>'
+                     : '<th>Pts</th><th>W</th><th>L</th>'}
+          </tr></thead>
+          <tbody>
+            ${mst.map((s,i) => {
+              const p = mexPlayer(s.id);
+              return `<tr class="${i===0?'gold-row':''}">
+                <td style="width:28px;font-size:16px;">${medals[i]||i+1}</td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+                    <div style="font-weight:700;">${p.name}</div>
+                  </div>
+                </td>
+                ${tennis
+                  ? `<td style="font-weight:800;color:${i===0?'var(--gold)':''};">${s.w}–${s.l}</td>
+                     <td style="color:var(--blue);font-weight:600;">${s.sw}</td>
+                     <td style="color:var(--muted);">${s.sl}</td>
+                     <td style="color:${s.sw-s.sl>=0?'var(--green)':'var(--red)'};font-weight:600;">${s.sw-s.sl>0?'+':''}${s.sw-s.sl}</td>`
+                  : `<td style="font-weight:700;color:${i===0?'var(--gold)':''};">${s.pts}</td>
+                     <td style="color:var(--green);font-weight:600;">${s.w}</td>
+                     <td style="color:var(--muted);">${s.l}</td>`}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="lbl" style="margin-bottom:8px;">Match History</div>
+      ${S.schedule.map((round, ri) => `
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;">Round ${ri+1}</div>
+          ${round.map(m => {
+            const p1 = mexPlayer(m.playerA1), p2 = mexPlayer(m.playerA2);
+            const p3 = mexPlayer(m.playerB1), p4 = mexPlayer(m.playerB2);
+            const sc = tennis ? `${m.setsA}–${m.setsB}` : `${m.scoreA}:${m.scoreB}`;
+            const winA = tennis ? m.setsA > m.setsB : m.scoreA > m.scoreB;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface);border-radius:8px;margin-bottom:4px;font-size:12px;">
+              <div style="flex:1;text-align:right;font-weight:${winA?700:400};color:${winA?'var(--gold)':'var(--text)'};">${p1.name}&${p2.name}</div>
+              <div style="font-weight:800;min-width:38px;text-align:center;font-size:15px;">${sc}</div>
+              <div style="flex:1;font-weight:${!winA?700:400};color:${!winA?'var(--blue)':'var(--text)'};">${p3.name}&${p4.name}</div>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+
+      <div style="display:flex;gap:10px;margin-top:24px;">
+        <button class="btn btn-outline" onclick="go('play')">← Back</button>
+        <button class="btn btn-gold" style="flex:1;" onclick="confirmNew()">New Session</button>
+      </div>`;
+  }
+
   const st     = standings();
   const wSt    = st[0];
   const wT     = team(wSt.id);
-  const tennis = S.scoringMode === 'tennis';
-  const medals = ['🥇','🥈','🥉'];
   const sub    = tennis ? `${wSt.mw} match${wSt.mw!==1?'es':''} · ${wSt.sw} sets won` : `${wSt.pts} points`;
 
   return `
@@ -913,7 +1394,7 @@ function finalHTML() {
 }
 
 function confirmNew() {
-  if (confirm('Start a new session? Results will be cleared.')) { wipe(); newSession(); }
+  if (confirm('Start a new session? Results will be cleared.')) { wipe(); go('home'); }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
