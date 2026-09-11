@@ -912,7 +912,7 @@ function playHTML() {
   const totalMatches = S.schedule.reduce((s,r) => s + r.length, 0);
   const allDone = totalDone === totalMatches;
   const prog = Math.round((totalDone / totalMatches) * 100);
-  const st = standings();
+  const st = S.gameMode === 'mexicano' ? [] : standings();
 
   return `
     <!-- Header -->
