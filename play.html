@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0c0c0c">
-  <title>Team Americano · Champions Club</title>
+  <title>Champions Play</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1477,27 +1477,30 @@ function toast(msg) {
 // ── Sheets: save & history ────────────────────────────────────────────────────
 function saveSession(nameOverride) {
   if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_APPS')) { toast('Set SCRIPT_URL in code first'); return; }
-  const st = S.gameMode === 'mexicano' ? mexicanoStandings() : standings();
-  const payload = {
-    sessionName:   nameOverride || S.sessionName || '',
-    gameMode:      S.gameMode,
-    scoringMode:   S.scoringMode,
-    setFormat:     S.setFormat,
-    pointsPerMatch:S.pointsPerMatch,
-    courts:        S.courts,
-    teams:         S.teams   || [],
-    players:       S.players || [],
-    standings:     st,
-    schedule:      S.schedule
+  var st = S.gameMode === 'mexicano' ? mexicanoStandings() : standings();
+  var payload = {
+    sessionName:    nameOverride || S.sessionName || '',
+    gameMode:       S.gameMode,
+    scoringMode:    S.scoringMode,
+    setFormat:      S.setFormat,
+    pointsPerMatch: S.pointsPerMatch,
+    courts:         S.courts,
+    teams:          S.teams   || [],
+    players:        S.players || [],
+    standings:      st,
+    schedule:       S.schedule
   };
-  toast('Saving…');
-  fetch(SCRIPT_URL, {
-    method: 'POST', mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  })
-  .then(() => { toast('✓ Session saved!'); S.saved = true; persist(); })
-  .catch(() => toast('Save failed — check your connection'));
+  var body = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+  var queued = navigator.sendBeacon(SCRIPT_URL, body);
+  if (queued) {
+    toast('✓ Session saved!');
+    S.saved = true; persist();
+  } else {
+    // sendBeacon not available — fallback
+    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: body })
+      .then(function() { toast('✓ Session saved!'); S.saved = true; persist(); })
+      .catch(function() { toast('Save failed — check connection'); });
+  }
 }
 
 function promptSaveSession() {
