@@ -228,6 +228,32 @@
 <div id="app" class="app"></div>
 <div class="toast" id="toast"></div>
 
+<!-- Share Results Modal -->
+<div id="share-modal" style="display:none;position:fixed;inset:0;z-index:1000;
+     background:rgba(0,0,0,0.88);align-items:center;justify-content:center;
+     padding:16px;box-sizing:border-box;flex-direction:column;gap:12px;">
+  <canvas id="share-canvas" style="max-width:100%;border-radius:12px;display:block;box-shadow:0 8px 40px rgba(0,0,0,0.6);"></canvas>
+  <div style="display:flex;gap:8px;width:100%;max-width:520px;">
+    <button onclick="doShare()"
+      style="flex:1;padding:14px;background:var(--gold);color:#0c0c0c;border:none;
+             border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">
+      ⬆ Share / Download
+    </button>
+    <button onclick="copyShareText()"
+      style="padding:14px 16px;background:rgba(255,255,255,0.08);color:var(--text);
+             border:1px solid var(--border);border-radius:10px;font-weight:600;
+             font-size:14px;cursor:pointer;font-family:inherit;">
+      Copy Text
+    </button>
+    <button onclick="closeShareModal()"
+      style="padding:14px 16px;background:transparent;color:var(--muted);
+             border:1px solid var(--border);border-radius:10px;font-size:16px;
+             cursor:pointer;font-family:inherit;">
+      ✕
+    </button>
+  </div>
+</div>
+
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
 const COLORS       = ['#f5c842','#60a5fa','#f87171','#4ade80','#fb923c','#a78bfa','#34d399','#f472b6','#e879f9','#22d3ee','#fbbf24','#86efac'];
@@ -1377,6 +1403,7 @@ function finalHTML() {
           style="${S.saved?'opacity:0.5;':''}">
           ${S.saved ? '✓ Saved' : '💾 Save Session'}
         </button>
+        <button class="btn btn-outline btn-full" onclick="openShareModal()">📤 Share Results</button>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" onclick="go('play')">← Back</button>
           <button class="btn btn-outline" style="flex:1;" onclick="confirmNew()">New Session</button>
@@ -1465,6 +1492,7 @@ function finalHTML() {
         style="${S.saved?'opacity:0.5;':''}">
         ${S.saved ? '✓ Saved' : '💾 Save Session'}
       </button>
+      <button class="btn btn-outline btn-full" onclick="openShareModal()">📤 Share Results</button>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-outline" onclick="go('play')">← Back</button>
         <button class="btn btn-outline" style="flex:1;" onclick="confirmNew()">New Session</button>
@@ -1474,6 +1502,197 @@ function finalHTML() {
 
 function confirmNew() {
   if (confirm('Start a new session? Results will be cleared.')) { wipe(); go('home'); }
+}
+
+// ── Share Results Card ─────────────────────────────────────────────────────────
+
+function openShareModal() {
+  var modal = document.getElementById('share-modal');
+  modal.style.display = 'flex';
+  setTimeout(function() { drawShareCard(document.getElementById('share-canvas')); }, 50);
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').style.display = 'none';
+}
+
+function shareText() {
+  var isMex = S.gameMode === 'mexicano';
+  var tennis = S.scoringMode === 'tennis';
+  var medals = ['🥇','🥈','🥉'];
+  var name = S.sessionName || 'Match Results';
+  var date = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  var lines = ['🏆 Champions Padel — ' + name, date, '', 'Final Standings:'];
+  if (isMex) {
+    mexicanoStandings().forEach(function(s,i) {
+      var p = mexPlayer(s.id);
+      var sc = tennis ? s.w + 'W · ' + s.sw + ' sets' : s.pts + ' pts';
+      lines.push((medals[i]||i+1+'.') + ' ' + p.name + ' — ' + sc);
+    });
+  } else {
+    standings().forEach(function(s,i) {
+      var t = team(s.id);
+      var sc = tennis ? s.mw + 'W · ' + s.sw + ' sets' : s.pts + ' pts';
+      lines.push((medals[i]||i+1+'.') + ' ' + t.name + ' (' + pname(t) + ') — ' + sc);
+    });
+  }
+  lines.push('','🎾 champions-padel.github.io/play.html');
+  return lines.join('\n');
+}
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function drawShareCard(canvas) {
+  var W = 520, PAD = 32;
+  var isMex = S.gameMode === 'mexicano';
+  var tennis = S.scoringMode === 'tennis';
+  var medals = ['🥇','🥈','🥉'];
+  var SF = '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+
+  var entries = [];
+  if (isMex) {
+    mexicanoStandings().forEach(function(s) {
+      var p = mexPlayer(s.id);
+      entries.push({ name: p.name, sub: tennis ? s.w+'W · '+s.sw+' sets' : s.pts+' pts', color: p.color });
+    });
+  } else {
+    standings().forEach(function(s) {
+      var t = team(s.id);
+      entries.push({ name: t.name, players: pname(t), sub: tennis ? s.mw+'W · '+s.sw+' sets' : s.pts+' pts', color: t.color });
+    });
+  }
+
+  var maxRows = Math.min(entries.length, 6);
+  var hasPlayers = entries[0] && entries[0].players;
+  var rowH = hasPlayers ? 46 : 40;
+  var H = 315 + maxRows * rowH + 48;
+
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#111'; ctx.fillRect(0,0,W,H);
+
+  // Subtle grid lines
+  ctx.strokeStyle = 'rgba(245,200,66,0.035)'; ctx.lineWidth = 1;
+  for (var gy=0; gy<H; gy+=44) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke(); }
+  for (var gx=0; gx<W; gx+=44) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
+
+  // Gold top bar
+  var gbar = ctx.createLinearGradient(0,0,W,0);
+  gbar.addColorStop(0,'#f5c842'); gbar.addColorStop(0.5,'#ffe880'); gbar.addColorStop(1,'#f5c842');
+  ctx.fillStyle = gbar; ctx.fillRect(0,0,W,5);
+
+  var cy = 38;
+
+  // Header label
+  ctx.fillStyle = '#f5c842'; ctx.font = '700 10px '+SF; ctx.textAlign = 'center';
+  ctx.fillText('C H A M P I O N S   P A D E L', W/2, cy); cy += 26;
+
+  // Session name
+  var sessionName = S.sessionName || 'Match Results';
+  ctx.fillStyle = '#efefef'; ctx.font = '700 17px '+SF;
+  ctx.fillText(sessionName, W/2, cy); cy += 20;
+
+  // Date + mode
+  var dateStr = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  var modeStr = isMex ? 'Mexicano' : 'Americano';
+  ctx.fillStyle = '#6b7280'; ctx.font = '400 11px '+SF;
+  ctx.fillText(dateStr + ' · ' + modeStr, W/2, cy); cy += 22;
+
+  // Gold separator
+  ctx.strokeStyle = 'rgba(245,200,66,0.2)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60,cy); ctx.lineTo(W-60,cy); ctx.stroke(); cy += 30;
+
+  // Trophy
+  ctx.font = '50px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('🏆', W/2, cy+36); cy += 56;
+
+  // Winner
+  var winner = entries[0] || { name:'—', sub:'' };
+  ctx.fillStyle = '#f5c842'; ctx.font = '800 22px '+SF;
+  ctx.fillText(winner.name, W/2, cy); cy += 20;
+  if (winner.players) {
+    ctx.fillStyle = '#9ca3af'; ctx.font = '400 11px '+SF;
+    ctx.fillText(winner.players, W/2, cy); cy += 18;
+  }
+  ctx.fillStyle = '#d1d5db'; ctx.font = '600 13px '+SF;
+  ctx.fillText(winner.sub, W/2, cy); cy += 26;
+
+  // Thin separator
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD,cy); ctx.lineTo(W-PAD,cy); ctx.stroke(); cy += 16;
+
+  // Standings label
+  ctx.fillStyle = '#6b7280'; ctx.font = '700 9px '+SF; ctx.textAlign = 'center';
+  ctx.fillText('F I N A L   S T A N D I N G S', W/2, cy); cy += 18;
+
+  // Rows
+  for (var i=0; i<maxRows; i++) {
+    var e = entries[i];
+    var ry = cy + i*rowH;
+    if (i === 0) {
+      ctx.fillStyle = 'rgba(245,200,66,0.07)';
+      rrect(ctx, PAD, ry-12, W-PAD*2, rowH-4, 8); ctx.fill();
+    }
+    ctx.font = '15px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(medals[i]||(i+1)+'.', PAD+6, ry+5);
+    ctx.fillStyle = i===0 ? '#f5c842' : '#efefef';
+    ctx.font = (i===0?'800':'600')+' '+(i===0?15:14)+'px '+SF;
+    ctx.fillText(e.name, PAD+36, ry+5);
+    if (e.players) {
+      ctx.fillStyle = '#6b7280'; ctx.font = '400 10px '+SF;
+      ctx.fillText(e.players, PAD+36, ry+19);
+    }
+    ctx.textAlign = 'right';
+    ctx.fillStyle = i===0 ? '#f5c842' : '#9ca3af';
+    ctx.font = (i===0?'700':'400')+' 13px '+SF;
+    ctx.fillText(e.sub, W-PAD, ry+5);
+  }
+
+  // Footer bar
+  ctx.fillStyle = 'rgba(245,200,66,0.1)'; ctx.fillRect(0,H-36,W,36);
+  ctx.strokeStyle = 'rgba(245,200,66,0.18)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H-36); ctx.lineTo(W,H-36); ctx.stroke();
+  ctx.fillStyle = '#f5c842'; ctx.font = '600 10px '+SF; ctx.textAlign = 'center';
+  ctx.fillText('champions-padel.github.io', W/2, H-13);
+}
+
+function doShare() {
+  var canvas = document.getElementById('share-canvas');
+  canvas.toBlob(function(blob) {
+    var slug = (S.sessionName||'results').replace(/[^a-z0-9]/gi,'-').toLowerCase();
+    var file = new File([blob], slug+'-champions.png', {type:'image/png'});
+    if (navigator.canShare && navigator.canShare({files:[file]})) {
+      navigator.share({files:[file], title:'Champions Padel Results', text:shareText()}).catch(function(){});
+    } else {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href=url; a.download=slug+'-champions.png';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+  });
+}
+
+function copyShareText() {
+  var text = shareText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { toast('Copied to clipboard!'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value=text; ta.style.cssText='position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Copied!');
+  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1493,15 +1712,15 @@ function standings() {
 
 function firstToStandings() {
   const map = {};
-  S.teams.forEach(t => { map[t.id] = { id:t.id, w:0, l:0, scored:0, conceded:0 }; });
+  S.teams.forEach(t => { map[t.id] = { id:t.id, w:0, l:0, pts:0, ag:0 }; });
   S.schedule.forEach(r => r.forEach(m => {
     if (!m.done) return;
-    map[m.teamA].scored += m.scoreA; map[m.teamA].conceded += m.scoreB;
-    map[m.teamB].scored += m.scoreB; map[m.teamB].conceded += m.scoreA;
+    map[m.teamA].pts += m.scoreA; map[m.teamA].ag += m.scoreB;
+    map[m.teamB].pts += m.scoreB; map[m.teamB].ag += m.scoreA;
     if (m.scoreA > m.scoreB) { map[m.teamA].w++; map[m.teamB].l++; }
     else                     { map[m.teamB].w++; map[m.teamA].l++; }
   }));
-  return Object.values(map).sort((a,b) => b.w-a.w || (b.scored-b.conceded)-(a.scored-a.conceded));
+  return Object.values(map).sort((a,b) => b.w-a.w || (b.pts-b.ag)-(a.pts-a.ag));
 }
 
 function pointsStandings() {
