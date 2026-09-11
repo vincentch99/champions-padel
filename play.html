@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0c0c0c">
   <title>Team Americano · Champions Club</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -18,133 +22,166 @@
       --green:   #4ade80;
       --red:     #f87171;
       --blue:    #60a5fa;
+      --safe-b:  env(safe-area-inset-bottom, 0px);
+      --safe-t:  env(safe-area-inset-top, 0px);
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
 
-    /* ── Layout ── */
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 15px;
+      min-height: 100svh; overscroll-behavior: none;
+    }
+
+    /* ── Topbar ── */
     .topbar {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(12,12,12,0.88); backdrop-filter: blur(12px);
+      background: rgba(12,12,12,0.92); backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px; height: 52px;
+      padding: 0 18px;
+      height: calc(52px + var(--safe-t));
+      padding-top: var(--safe-t);
     }
     .topbar-logo { font-size: 12px; font-weight: 800; letter-spacing: 0.15em; color: var(--gold); }
-    .app { max-width: 700px; margin: 0 auto; padding: 24px 16px 80px; }
+    .topbar a { font-size: 13px; color: var(--muted); text-decoration: none; padding: 8px 0 8px 8px; }
+
+    /* ── App shell ── */
+    .app { max-width: 600px; margin: 0 auto; padding: 20px 14px calc(36px + var(--safe-b)); }
 
     /* ── Cards ── */
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
     .card-hi { background: var(--surface2); }
 
-    /* ── Buttons ── */
+    /* ── Buttons — all have 48px min touch target ── */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 11px 22px; border-radius: 8px;
-      font-family: inherit; font-size: 14px; font-weight: 600;
-      cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
+      min-height: 48px; padding: 12px 22px; border-radius: 10px;
+      font-family: inherit; font-size: 15px; font-weight: 600;
+      cursor: pointer; border: none; transition: background 0.12s, opacity 0.12s;
+      white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     }
     .btn-gold    { background: var(--gold); color: #0c0c0c; }
-    .btn-gold:hover { background: #f0be30; }
+    .btn-gold:active  { opacity: 0.82; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { border-color: rgba(255,255,255,0.3); }
-    .btn-ghost   { background: transparent; border: none; color: var(--muted); }
-    .btn-ghost:hover { color: var(--text); }
+    .btn-outline:active { background: rgba(255,255,255,0.06); }
+    .btn-ghost   { background: transparent; border: none; color: var(--muted); min-height: 44px; }
     .btn-danger  { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-    .btn-sm      { padding: 7px 13px; font-size: 12px; border-radius: 6px; }
+    .btn-sm      { min-height: 40px; padding: 8px 14px; font-size: 13px; border-radius: 8px; }
     .btn-full    { width: 100%; }
-    .btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+    .btn:disabled { opacity: 0.35; pointer-events: none; }
 
-    /* ── Inputs ── */
+    /* ── Inputs — 16px prevents iOS zoom ── */
     .inp {
-      width: 100%; background: rgba(255,255,255,0.06);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 9px 13px; font-family: inherit; font-size: 14px; color: var(--text);
+      width: 100%; background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 13px 14px; font-family: inherit; font-size: 16px; color: var(--text);
+      -webkit-appearance: none; appearance: none;
       transition: border-color 0.15s;
     }
-    .inp:focus { outline: none; border-color: var(--gold); }
+    .inp:focus { outline: none; border-color: var(--gold); background: rgba(255,255,255,0.09); }
     .inp::placeholder { color: var(--muted); }
-    .inp-sm { padding: 7px 10px; font-size: 13px; border-radius: 6px; }
+    .inp-sm { padding: 10px 12px; font-size: 16px; border-radius: 8px; }
 
     /* ── Score inputs ── */
     .score-inp {
-      width: 60px; text-align: center;
-      background: rgba(255,255,255,0.07); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 6px;
-      font-size: 22px; font-weight: 800; color: var(--text); font-family: inherit;
+      width: 72px; text-align: center;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 6px;
+      font-size: 28px; font-weight: 800; color: var(--text); font-family: inherit;
+      -webkit-appearance: none; appearance: none;
     }
-    .score-inp:focus { outline: none; border-color: var(--gold); background: rgba(255,255,255,0.1); }
-    .set-inp {
-      width: 52px; text-align: center;
-      background: rgba(255,255,255,0.07); border: 1px solid var(--border);
-      border-radius: 6px; padding: 9px 4px;
-      font-size: 18px; font-weight: 700; color: var(--text); font-family: inherit;
-    }
-    .set-inp:focus { outline: none; border-color: var(--blue); }
+    .score-inp:focus { outline: none; border-color: var(--gold); background: rgba(255,255,255,0.12); }
 
     /* ── Toggle group ── */
-    .tg { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tg { display: flex; gap: 8px; flex-wrap: wrap; }
     .tg-btn {
-      padding: 8px 16px; border-radius: 8px;
+      min-height: 44px; padding: 10px 18px; border-radius: 10px;
       border: 1px solid var(--border); background: transparent;
-      color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 500;
-      cursor: pointer; transition: all 0.15s;
+      color: var(--muted); font-family: inherit; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all 0.12s; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .tg-btn.on      { background: var(--gold); color: #0c0c0c; border-color: var(--gold); font-weight: 700; }
     .tg-btn.on-blue { background: var(--blue); color: #0c0c0c; border-color: var(--blue); font-weight: 700; }
-    .tg-btn:not(.on):not(.on-blue):hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+    .tg-btn:active  { opacity: 0.75; }
 
     /* ── Typography ── */
-    .h1  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
-    .h2  { font-size: 20px; font-weight: 700; }
+    .h1  { font-size: clamp(24px,7vw,32px); font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+    .h2  { font-size: 19px; font-weight: 700; }
     .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-    .dim { color: var(--muted); font-size: 13px; }
+    .dim { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
     /* ── Progress ── */
-    .prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 10px 0 8px; }
+    .prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 10px 0 10px; }
     .prog-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s; }
 
     /* ── Info box ── */
-    .info-box { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .info-cell { flex: 1; padding: 12px 8px; text-align: center; border-right: 1px solid var(--border); }
-    .info-cell:last-child { border-right: none; }
-    .info-val { font-size: 22px; font-weight: 800; color: var(--gold); line-height: 1; }
-    .info-key { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+    .info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .info-cell { padding: 14px 10px; text-align: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .info-cell:nth-child(2n) { border-right: none; }
+    .info-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .info-val { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; }
+    .info-key { font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
 
     /* ── Standings table ── */
-    .tbl { width: 100%; border-collapse: collapse; }
-    .tbl th { padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); text-align: left; }
-    .tbl td { padding: 11px 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tbl { width: 100%; border-collapse: collapse; min-width: 280px; }
+    .tbl th { padding: 10px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    .tbl td { padding: 13px 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
     .tbl tr:last-child td { border-bottom: none; }
     .tbl tr.gold-row td { background: rgba(245,200,66,0.07); }
 
     /* ── Court badge ── */
-    .court-tag { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+    .court-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
 
-    /* ── Set rows ── */
-    .set-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .set-row:last-child { border-bottom: none; }
-    .set-lbl { font-size: 11px; color: var(--muted); font-weight: 600; width: 36px; flex-shrink: 0; }
+    /* ── Match card ── */
+    .match-teams {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 10px;
+    }
+    .match-score-block {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    /* ── Outcome buttons (tennis tap-to-score) ── */
+    .outcome-btn {
+      flex: 1; min-height: 56px; border-radius: 10px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+      color: var(--text); font-family: inherit; font-size: 18px; font-weight: 800;
+      cursor: pointer; transition: background 0.1s, border-color 0.1s, transform 0.08s;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .outcome-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
+
+    /* ── Editable score (done state) ── */
+    .score-edit {
+      cursor: pointer; border-bottom: 2px dashed rgba(255,255,255,0.25);
+      padding-bottom: 2px; transition: opacity 0.15s;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+    .score-edit:active { opacity: 0.5; }
 
     /* ── Toast ── */
     .toast {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-      background: #1c1c1c; border: 1px solid var(--border);
-      padding: 10px 20px; border-radius: 8px;
-      font-size: 13px; font-weight: 500;
-      z-index: 999; opacity: 0; transition: opacity 0.2s; white-space: nowrap; pointer-events: none;
+      position: fixed; bottom: calc(28px + var(--safe-b)); left: 50%;
+      transform: translateX(-50%);
+      background: #242424; border: 1px solid rgba(255,255,255,0.15);
+      padding: 12px 22px; border-radius: 10px;
+      font-size: 14px; font-weight: 500; max-width: 90vw; text-align: center;
+      z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none;
     }
     .toast.show { opacity: 1; }
 
     /* ── Animations ── */
-    .screen { animation: up 0.18s ease; }
-    @keyframes up { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .screen { animation: up 0.16s ease; }
+    @keyframes up { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
-    @media (max-width: 480px) {
-      .score-inp { width: 52px; font-size: 18px; }
-      .set-inp   { width: 44px; font-size: 16px; }
-      .h1 { font-size: 24px; }
-      .info-val { font-size: 18px; }
-    }
+    /* ── Round dots ── */
+    .round-dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+    .round-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -426,7 +463,12 @@ function refreshInfo() {
 
 function startSession() {
   if (S.teams.length < 4) { toast('Need at least 4 teams'); return; }
-  S.schedule = buildSchedule();
+  try {
+    S.schedule = buildSchedule();
+  } catch(e) {
+    toast('Error building schedule: ' + e.message); console.error(e); return;
+  }
+  if (!S.schedule || S.schedule.length === 0) { toast('Schedule is empty — check team count'); return; }
   S.currentRound = 0; S.status = 'playing';
   persist(); go('play');
 }
@@ -486,60 +528,86 @@ function buildSchedule() {
 function playHTML() {
   const round   = S.schedule[S.currentRound];
   const nRounds = S.schedule.length;
-  const done    = round.every(m => m.done);
-  const last    = S.currentRound === nRounds - 1;
-  const st      = standings();
-  const prog    = Math.round((S.currentRound / nRounds) * 100);
   const tennis  = S.scoringMode === 'tennis';
-  const modeTag = tennis
-    ? `Best of ${S.setFormat} · play all sets`
-    : `${S.pointsPerMatch} pts / match`;
+  const totalDone = S.schedule.reduce((s,r) => s + r.filter(m=>m.done).length, 0);
+  const totalMatches = S.schedule.reduce((s,r) => s + r.length, 0);
+  const allDone = totalDone === totalMatches;
+  const prog = Math.round((totalDone / totalMatches) * 100);
 
   return `
+    <!-- Header -->
     <div class="card card-hi" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div>
-          <div class="lbl">Round</div>
-          <div style="font-size:26px;font-weight:800;line-height:1.1;">
-            ${S.currentRound+1}
-            <span style="font-size:14px;font-weight:400;color:var(--muted);">/ ${nRounds}</span>
+          <div class="lbl">Matches</div>
+          <div style="font-size:22px;font-weight:800;line-height:1.1;">
+            ${totalDone}<span style="font-size:13px;font-weight:400;color:var(--muted);"> / ${totalMatches}</span>
           </div>
         </div>
         <div style="text-align:right;">
           <div class="lbl">Format</div>
-          <div style="font-size:13px;font-weight:700;color:${tennis?'var(--blue)':'var(--gold)'};">${modeTag}</div>
+          <div style="font-size:13px;font-weight:700;color:${tennis?'var(--blue)':'var(--gold)'};">
+            ${tennis ? `Bo${S.setFormat}` : `${S.pointsPerMatch} pts`}
+          </div>
         </div>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${prog}%"></div></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;">
-        ${S.schedule.map((_,i) => {
-          const d = S.schedule[i].every(m => m.done);
+      <!-- Round selector dots — tap to jump -->
+      <div class="round-dots">
+        ${S.schedule.map((r,i) => {
+          const d = r.every(m => m.done);
           const c = i === S.currentRound;
-          return `<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${c?'var(--gold)':d?'var(--green)':'var(--border)'}"></div>`;
+          return `<div class="round-dot" onclick="jumpRound(${i})"
+            style="background:${c?'var(--gold)':d?'var(--green)':'var(--border)'};
+                   width:${c?'22px':'9px'};border-radius:5px;cursor:pointer;
+                   transition:width 0.2s,background 0.2s;"></div>`;
         }).join('')}
       </div>
     </div>
 
-    <div class="lbl" style="margin-bottom:8px;">${round.filter(m=>m.done).length} / ${round.length} matches complete</div>
+    <!-- Round tabs (scroll row) -->
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;
+                -webkit-overflow-scrolling:touch;scrollbar-width:none;" id="round-tabs">
+      ${S.schedule.map((r,i) => {
+        const d   = r.every(m => m.done);
+        const cur = i === S.currentRound;
+        const partial = r.some(m=>m.done) && !d;
+        return `<button onclick="jumpRound(${i})"
+          style="flex-shrink:0;min-height:36px;padding:6px 14px;border-radius:20px;
+                 font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+                 touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                 border:1px solid ${cur?'var(--gold)':d?'var(--green)':partial?'rgba(96,165,250,0.4)':'var(--border)'};
+                 background:${cur?'var(--gold)':d?'rgba(74,222,128,0.1)':partial?'rgba(96,165,250,0.08)':'transparent'};
+                 color:${cur?'#0c0c0c':d?'var(--green)':'var(--text)'};">
+          R${i+1}${d?' ✓':''}
+        </button>`;
+      }).join('')}
+    </div>
+
+    <!-- Current round matches -->
+    <div class="lbl" style="margin-bottom:10px;">
+      Round ${S.currentRound+1}
+      <span style="color:var(--text);"> · ${round.filter(m=>m.done).length}/${round.length} done</span>
+    </div>
     <div id="matches">${round.map(m => matchCardHTML(m)).join('')}</div>
 
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      ${S.currentRound > 0 ? `<button class="btn btn-outline btn-sm" onclick="prevRound()">← Prev</button>` : ''}
-      ${done
-        ? `<button class="btn btn-gold" style="flex:1;padding:14px;" onclick="${last?'finish()':'nextRound()'}">
-             ${last ? '🏆 See Final Results' : 'Next Round →'}
-           </button>`
-        : `<div style="flex:1;text-align:center;padding:14px;color:var(--muted);font-size:13px;">Complete all matches to continue</div>`}
+    <!-- Finish button -->
+    <div style="margin-top:16px;">
+      ${allDone
+        ? `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`
+        : `<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px;">
+             ${totalMatches - totalDone} match${totalMatches-totalDone!==1?'es':''} remaining
+           </div>`}
     </div>
 
     <!-- Live standings -->
     <div style="margin-top:24px;">
       <div class="lbl" style="margin-bottom:8px;">Live Standings</div>
-      <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card tbl-wrap" style="padding:0;">
         <table class="tbl">
           <thead><tr>
             <th>#</th><th>Team</th>
-            ${tennis ? '<th title="Matches Won">MW</th><th title="Sets Won">SW</th><th title="Sets Lost">SL</th>'
+            ${tennis ? '<th>MW</th><th>SW</th><th>SL</th>'
                      : '<th>Pts</th><th>W</th><th>L</th>'}
           </tr></thead>
           <tbody>
@@ -580,64 +648,71 @@ function matchCardHTML(m) {
 
 function courtBadge(m) {
   const cc = COURT_COLORS[(m.court - 1) % COURT_COLORS.length];
-  return `<span class="court-tag" style="background:${cc}20;color:${cc};">Court ${m.court}</span>`;
+  return `<span class="court-tag" style="background:${cc}22;color:${cc};">Court ${m.court}</span>`;
 }
 
-function teamNameRow(t, align) {
+function teamBlock(t, align) {
   const right = align === 'right';
   return `
-    <div style="text-align:${align};">
-      <div style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;${right?'justify-content:flex-end;':''}">
+    <div style="text-align:${align};min-width:0;">
+      <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;${right?'justify-content:flex-end;':''}overflow:hidden;">
         ${right
-          ? `<span>${t.name}</span><div style="width:8px;height:8px;border-radius:50%;background:${t.color};"></div>`
-          : `<div style="width:8px;height:8px;border-radius:50%;background:${t.color};"></div><span>${t.name}</span>`}
+          ? `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name}</span>
+             <div style="width:9px;height:9px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>`
+          : `<div style="width:9px;height:9px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
+             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name}</span>`}
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px;${right?'margin-right:14px;':'margin-left:14px;'}">${pname(t)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pname(t)}</div>
     </div>`;
 }
 
 // Points card
 function pointsCardHTML(m) {
   const tA = team(m.teamA), tB = team(m.teamB);
+
   if (m.done) {
     const winA = m.scoreA > m.scoreB;
     return `
-      <div class="card" style="margin-bottom:10px;opacity:0.72;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <div class="card" style="margin-bottom:10px;opacity:0.75;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           ${courtBadge(m)}
           <span style="font-size:11px;color:var(--green);font-weight:700;">✓ Done</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap score to edit</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;gap:10px;">
-          ${teamNameRow(tA,'left')}
-          <div onclick="editMatch('${m.id}')" title="Tap to edit"
-            style="font-size:28px;font-weight:800;color:${winA?tA.color:'var(--text)'};
-                   cursor:pointer;border-bottom:2px dashed rgba(255,255,255,0.2);padding-bottom:2px;
-                   transition:opacity 0.15s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='1'">${m.scoreA}</div>
-          <div style="color:var(--muted);">—</div>
-          <div onclick="editMatch('${m.id}')" title="Tap to edit"
-            style="font-size:28px;font-weight:800;color:${!winA?tB.color:'var(--text)'};
-                   cursor:pointer;border-bottom:2px dashed rgba(255,255,255,0.2);padding-bottom:2px;
-                   transition:opacity 0.15s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='1'">${m.scoreB}</div>
-          ${teamNameRow(tB,'right')}
+        <div class="match-teams">
+          ${teamBlock(tA,'left')}
+          <div class="match-score-block">
+            <div class="score-edit" onclick="editMatch('${m.id}')"
+              style="font-size:32px;font-weight:800;color:${winA?tA.color:'var(--text)'};">${m.scoreA}</div>
+            <div style="color:var(--muted);font-size:16px;margin:0 2px;">–</div>
+            <div class="score-edit" onclick="editMatch('${m.id}')"
+              style="font-size:32px;font-weight:800;color:${!winA?tB.color:'var(--text)'};">${m.scoreB}</div>
+          </div>
+          ${teamBlock(tB,'right')}
         </div>
       </div>`;
   }
+
   return `
     <div class="card" style="margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
         ${courtBadge(m)}
         <span class="dim" style="font-size:11px;">Play to ${S.pointsPerMatch} pts</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;gap:10px;">
-        ${teamNameRow(tA,'left')}
-        <input type="number" class="score-inp" id="sA-${m.id}" min="0" max="${S.pointsPerMatch}"
-          placeholder="—" oninput="autoFill('${m.id}','A',this.value)">
-        <span style="color:var(--muted);font-size:18px;">:</span>
-        <input type="number" class="score-inp" id="sB-${m.id}" min="0" max="${S.pointsPerMatch}"
-          placeholder="—" oninput="autoFill('${m.id}','B',this.value)">
-        ${teamNameRow(tB,'right')}
+      <div class="match-teams" style="margin-bottom:16px;">
+        ${teamBlock(tA,'left')}
+        <div class="match-score-block">
+          <input type="number" inputmode="numeric" class="score-inp" id="sA-${m.id}"
+            min="0" max="${S.pointsPerMatch}" placeholder="0"
+            oninput="autoFill('${m.id}','A',this.value)">
+          <span style="color:var(--muted);font-size:18px;margin:0 2px;">:</span>
+          <input type="number" inputmode="numeric" class="score-inp" id="sB-${m.id}"
+            min="0" max="${S.pointsPerMatch}" placeholder="0"
+            oninput="autoFill('${m.id}','B',this.value)">
+        </div>
+        ${teamBlock(tB,'right')}
       </div>
-      <button class="btn btn-gold btn-full" style="margin-top:14px;padding:10px;" onclick="submitPoints('${m.id}')">Submit Score</button>
+      <button class="btn btn-gold btn-full" onclick="submitPoints('${m.id}')">Submit Score</button>
     </div>`;
 }
 
@@ -653,13 +728,13 @@ function submitPoints(id) {
   const sB = parseInt(document.getElementById('sB-'+id)?.value);
   if (isNaN(sA)||isNaN(sB))       { toast('Enter both scores'); return; }
   if (sA<0||sB<0)                 { toast('Scores must be 0 or above'); return; }
-  if (sA+sB !== S.pointsPerMatch) { toast(`Scores must sum to ${S.pointsPerMatch}`); return; }
+  if (sA+sB !== S.pointsPerMatch) { toast(`Scores must add up to ${S.pointsPerMatch}`); return; }
   const m = findMatch(id); if (!m) return;
   m.scoreA = sA; m.scoreB = sB; m.done = true;
   persist(); go('play');
 }
 
-// Tennis card — tap the final set score outcome (e.g. 2-0, 2-1 for Bo3)
+// Tennis card — tap the final outcome button
 function tennisCardHTML(m) {
   const tA    = team(m.teamA), tB = team(m.teamB);
   const toWin = Math.ceil(S.setFormat / 2);
@@ -667,58 +742,50 @@ function tennisCardHTML(m) {
   if (m.done) {
     const winA = m.setsA > m.setsB;
     return `
-      <div class="card" style="margin-bottom:10px;opacity:0.72;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <div class="card" style="margin-bottom:10px;opacity:0.75;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           ${courtBadge(m)}
           <span style="font-size:11px;color:var(--green);font-weight:700;">✓ Done</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap score to edit</span>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="flex:1;font-weight:${winA?700:400};color:${winA?tA.color:'var(--text)'};">${tA.name}</div>
-          <div onclick="editMatch('${m.id}')" title="Tap to edit"
-            style="font-size:26px;font-weight:800;cursor:pointer;
-                   border-bottom:2px dashed rgba(255,255,255,0.2);padding-bottom:2px;
-                   transition:opacity 0.15s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='1'">
-            ${m.setsA} – ${m.setsB}
+        <div class="match-teams">
+          ${teamBlock(tA,'left')}
+          <div onclick="editMatch('${m.id}')" class="score-edit"
+            style="font-size:30px;font-weight:800;text-align:center;padding:4px 8px;">
+            <span style="color:${winA?tA.color:'var(--text)'};">${m.setsA}</span>
+            <span style="color:var(--muted);font-size:18px;margin:0 3px;">–</span>
+            <span style="color:${!winA?tB.color:'var(--text)'};">${m.setsB}</span>
           </div>
-          <div style="flex:1;text-align:right;font-weight:${!winA?700:400};color:${!winA?tB.color:'var(--text)'};">${tB.name}</div>
+          ${teamBlock(tB,'right')}
         </div>
       </div>`;
   }
 
-  // All teams always play all sets — scores must sum to setFormat
-  // e.g. Bo3: 2-1, 3-0  |  Bo5: 3-2, 4-1, 5-0
+  // All sets always played — scores sum to setFormat
   const outcomes = [];
   for (let w = toWin; w <= S.setFormat; w++) outcomes.push({ w, l: S.setFormat - w });
 
-  const outcomeBtn = (sA, sB, label) => `
-    <button onclick="selectOutcome('${m.id}',${sA},${sB})"
-      style="flex:1;padding:12px 6px;border-radius:8px;border:1px solid var(--border);
-             background:transparent;color:var(--text);font-family:inherit;font-size:15px;
-             font-weight:700;cursor:pointer;transition:all 0.12s;"
-      onmouseover="this.style.background='rgba(255,255,255,0.08)'"
-      onmouseout="this.style.background='transparent'">
-      ${label}
-    </button>`;
+  const outcomeBtn = (sA, sB, label) =>
+    `<button class="outcome-btn" onclick="selectOutcome('${m.id}',${sA},${sB})">${label}</button>`;
 
   return `
     <div class="card" style="margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
         ${courtBadge(m)}
-        <span class="dim" style="font-size:11px;">Play all ${S.setFormat} sets · most wins</span>
+        <span class="dim" style="font-size:11px;">All ${S.setFormat} sets · most wins</span>
       </div>
 
-      <!-- Team names -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        ${teamNameRow(tA,'left')}
-        <span style="color:var(--muted);font-size:12px;padding:0 8px;">vs</span>
-        ${teamNameRow(tB,'right')}
+      <div class="match-teams" style="margin-bottom:18px;">
+        ${teamBlock(tA,'left')}
+        <span style="color:var(--muted);font-size:12px;">vs</span>
+        ${teamBlock(tB,'right')}
       </div>
 
       <!-- Team A wins -->
-      <div style="margin-bottom:10px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
-                    color:${tA.color};margin-bottom:6px;">${tA.name} wins</div>
-        <div style="display:flex;gap:6px;">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                    color:${tA.color};margin-bottom:8px;">${tA.name} wins</div>
+        <div style="display:flex;gap:8px;">
           ${outcomes.map(o => outcomeBtn(o.w, o.l, `${o.w}–${o.l}`)).join('')}
         </div>
       </div>
@@ -726,8 +793,8 @@ function tennisCardHTML(m) {
       <!-- Team B wins -->
       <div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
-                    color:${tB.color};margin-bottom:6px;">${tB.name} wins</div>
-        <div style="display:flex;gap:6px;">
+                    color:${tB.color};margin-bottom:8px;">${tB.name} wins</div>
+        <div style="display:flex;gap:8px;">
           ${outcomes.map(o => outcomeBtn(o.l, o.w, `${o.w}–${o.l}`)).join('')}
         </div>
       </div>
@@ -746,15 +813,16 @@ function editMatch(id) {
   persist(); go('play');
 }
 
-function prevRound() { if (S.currentRound > 0) { S.currentRound--; persist(); go('play'); } }
-
-function nextRound() {
-  if (!S.schedule[S.currentRound].every(m => m.done)) { toast('Complete all matches first'); return; }
-  S.currentRound++; persist(); go('play');
+function jumpRound(i) {
+  S.currentRound = i; persist(); go('play');
+  // scroll tab into view after render
+  setTimeout(() => {
+    const tabs = document.getElementById('round-tabs');
+    if (tabs) { const btn = tabs.children[i]; if (btn) btn.scrollIntoView({ inline:'center', behavior:'smooth' }); }
+  }, 50);
 }
 
 function finish() {
-  if (!S.schedule[S.currentRound].every(m => m.done)) { toast('Complete all matches first'); return; }
   S.status = 'finished'; persist(); go('final');
 }
 
@@ -777,7 +845,7 @@ function finalHTML() {
     </div>
 
     <div class="lbl" style="margin-bottom:8px;">Final Standings</div>
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+    <div class="card tbl-wrap" style="padding:0;margin-bottom:24px;">
       <table class="tbl">
         <thead><tr>
           <th>#</th><th>Team</th>
