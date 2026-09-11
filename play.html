@@ -1025,9 +1025,17 @@ function playHTML() {
 
     <!-- Live standings -->
     <div style="margin-top:24px;">
-      <div class="lbl" style="margin-bottom:8px;">Live Standings</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="lbl">Live Standings</div>
+        ${!tennis ? `<div style="display:flex;gap:5px;">
+          <button class="tg-btn ${(S.standingsSort||'wins')==='wins'?'on':''}"
+            style="padding:4px 11px;font-size:11px;" onclick="setSortBy('wins')">Wins</button>
+          <button class="tg-btn ${(S.standingsSort||'wins')==='pts'?'on':''}"
+            style="padding:4px 11px;font-size:11px;" onclick="setSortBy('pts')">Points</button>
+        </div>` : ''}
+      </div>
       ${S.gameMode === 'mexicano' ? (() => {
-        const mst = mexicanoStandings();
+        const mst = applySort(mexicanoStandings());
         const tennis2 = S.scoringMode === 'tennis';
         return `<div class="card tbl-wrap" style="padding:0;">
           <table class="tbl">
@@ -1348,7 +1356,15 @@ function finalHTML() {
         <div style="font-size:18px;font-weight:700;margin-top:10px;">${sub}</div>
       </div>
 
-      <div class="lbl" style="margin-bottom:8px;">Final Standings</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="lbl">Final Standings</div>
+        ${!tennis ? `<div style="display:flex;gap:5px;">
+          <button class="tg-btn ${(S.standingsSort||'wins')==='wins'?'on':''}"
+            style="padding:4px 11px;font-size:11px;" onclick="setSortBy('wins')">Wins</button>
+          <button class="tg-btn ${(S.standingsSort||'wins')==='pts'?'on':''}"
+            style="padding:4px 11px;font-size:11px;" onclick="setSortBy('pts')">Points</button>
+        </div>` : ''}
+      </div>
       <div class="card tbl-wrap" style="padding:0;margin-bottom:24px;">
         <table class="tbl">
           <thead><tr>
@@ -1357,7 +1373,7 @@ function finalHTML() {
                      : '<th>Pts</th><th>W</th><th>L</th>'}
           </tr></thead>
           <tbody>
-            ${mst.map((s,i) => {
+            ${applySort(mst).map((s,i) => {
               const p = mexPlayer(s.id);
               return `<tr class="${i===0?'gold-row':''}">
                 <td style="width:28px;font-size:16px;">${medals[i]||i+1}</td>
@@ -1425,7 +1441,15 @@ function finalHTML() {
       <div style="font-size:18px;font-weight:700;margin-top:10px;">${sub}</div>
     </div>
 
-    <div class="lbl" style="margin-bottom:8px;">Final Standings</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="lbl">Final Standings</div>
+      ${!tennis ? `<div style="display:flex;gap:5px;">
+        <button class="tg-btn ${(S.standingsSort||'wins')==='wins'?'on':''}"
+          style="padding:4px 11px;font-size:11px;" onclick="setSortBy('wins')">Wins</button>
+        <button class="tg-btn ${(S.standingsSort||'wins')==='pts'?'on':''}"
+          style="padding:4px 11px;font-size:11px;" onclick="setSortBy('pts')">Points</button>
+      </div>` : ''}
+    </div>
     <div class="card tbl-wrap" style="padding:0;margin-bottom:24px;">
       <table class="tbl">
         <thead><tr>
@@ -1706,8 +1730,23 @@ function findMatch(id) {
 
 function standings() {
   if (S.scoringMode === 'tennis') return tennisStandings();
-  if (S.scoringMode === 'firstto') return firstToStandings();
-  return pointsStandings();
+  if (S.scoringMode === 'firstto') return applySort(firstToStandings());
+  return applySort(pointsStandings());
+}
+
+function applySort(arr) {
+  var by = S.standingsSort || 'wins';
+  return arr.slice().sort(function(a, b) {
+    return by === 'pts'
+      ? (b.pts||0)-(a.pts||0) || (b.w||0)-(a.w||0)
+      : (b.w||0)-(a.w||0)   || (b.pts||0)-(a.pts||0);
+  });
+}
+
+function setSortBy(key) {
+  S.standingsSort = key;
+  persist();
+  go(S.status === 'finished' ? 'final' : 'play');
 }
 
 function firstToStandings() {
