@@ -1493,27 +1493,28 @@ function saveSession(nameOverride) {
   var format = S.scoringMode === 'tennis'
     ? 'Bo' + (S.setFormat || 3)
     : (S.pointsPerMatch || 32) + ' pts';
-  var sessionData = [
-    new Date().toISOString(),
-    payload.sessionName,
-    payload.gameMode,
-    payload.scoringMode,
-    format,
-    payload.courts,
-    (payload.schedule || []).length,
-    JSON.stringify(payload.standings || []),
-    JSON.stringify(payload.schedule  || [])
-  ];
-  var body = new Blob([JSON.stringify({ sessionData: sessionData })], { type: 'text/plain' });
-  var queued = navigator.sendBeacon(SCRIPT_URL, body);
-  if (queued) {
-    toast('✓ Session saved!');
-    S.saved = true; persist();
-  } else {
-    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: body })
-      .then(function() { toast('✓ Session saved!'); S.saved = true; persist(); })
-      .catch(function() { toast('Save failed — check connection'); });
-  }
+  var winner = st.length > 0
+    ? (S.gameMode === 'mexicano' ? mexPlayer(st[0].id).name : team(st[0].id).name)
+    : '';
+  var params = new URLSearchParams({
+    action:    'save',
+    name:      payload.sessionName || '',
+    mode:      payload.gameMode,
+    scoring:   payload.scoringMode,
+    format:    format,
+    courts:    payload.courts || 1,
+    rounds:    (payload.schedule || []).length,
+    winner:    winner,
+    standings: JSON.stringify(st.slice(0, 12))
+  });
+  toast('Saving…');
+  fetch(SCRIPT_URL + '?' + params.toString())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) { toast('✓ Session saved!'); S.saved = true; persist(); }
+      else { toast('Error: ' + (data.error || 'unknown')); }
+    })
+    .catch(function() { toast('Save failed — check connection'); });
 }
 
 function promptSaveSession() {
