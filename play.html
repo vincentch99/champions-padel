@@ -234,7 +234,7 @@ const COURT_COLORS = ['#f5c842','#60a5fa','#f87171','#4ade80'];
 const KEY          = 'cc-team-americano';
 
 // ── Sheets integration — paste your Apps Script deployment URL here ───────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzcZ-vggKtY9gVTuxecY86PS-RkSZMCjiwkhl3XFn3zgfr5l5L5aHeWXbbx5-I2sNoy/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz0ScCdvNn1NQYOqjuCp-ynpo3u9f97-tpD9D0T3xOnRYkOjuQbmQoOZM6892vt4zU7/exec';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let S = null;
@@ -1490,13 +1490,26 @@ function saveSession(nameOverride) {
     standings:      st,
     schedule:       S.schedule
   };
-  var body = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+  var format = S.scoringMode === 'tennis'
+    ? 'Bo' + (S.setFormat || 3)
+    : (S.pointsPerMatch || 32) + ' pts';
+  var sessionData = [
+    new Date().toISOString(),
+    payload.sessionName,
+    payload.gameMode,
+    payload.scoringMode,
+    format,
+    payload.courts,
+    (payload.schedule || []).length,
+    JSON.stringify(payload.standings || []),
+    JSON.stringify(payload.schedule  || [])
+  ];
+  var body = new Blob([JSON.stringify({ sessionData: sessionData })], { type: 'text/plain' });
   var queued = navigator.sendBeacon(SCRIPT_URL, body);
   if (queued) {
     toast('✓ Session saved!');
     S.saved = true; persist();
   } else {
-    // sendBeacon not available — fallback
     fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: body })
       .then(function() { toast('✓ Session saved!'); S.saved = true; persist(); })
       .catch(function() { toast('Save failed — check connection'); });
