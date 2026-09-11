@@ -508,6 +508,25 @@
     .gender-tag.male   { background: rgba(96,165,250,0.15); color: #93c5fd; }
     .gender-tag.female { background: rgba(244,114,182,0.15); color: #f9a8d4; }
 
+    .tier-divider td {
+      padding: 0.45rem 1rem;
+      border-bottom: none;
+      background: transparent;
+    }
+
+    .tier-label {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.65rem;
+      border-radius: 4px;
+    }
+
+    .tier-label.champions  { background: rgba(245,200,66,0.12); color: var(--gold); }
+    .tier-label.challengers { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
     .venue-row td {
       padding: 0.4rem 1rem 0.55rem;
       font-size: 0.72rem;
@@ -736,6 +755,7 @@
     <li><a href="#points">Points</a></li>
     <li><a href="#prizes">Prizes</a></li>
     <li><a href="#leaderboard">Leaderboard</a></li>
+    <li><a href="play.html" style="color:var(--gold);font-weight:700;">⚡ Play</a></li>
   </ul>
   <span class="live-badge">
     <span class="live-ball"></span>
@@ -1094,8 +1114,13 @@
         </tr>`
       : '';
 
+    const TIER_SIZE = 6;
+    const champHeader = `<tr class="tier-divider"><td colspan="8"><span class="tier-label champions">🏆 Champions Tier</span></td></tr>`;
+    const challengerHeader = `<tr class="tier-divider"><td colspan="8"><span class="tier-label challengers">⚡ Challengers Tier</span></td></tr>`;
+
     const tbody = document.getElementById('leaderboard-body');
-    tbody.innerHTML = venueRow + data.map((p, i) => {
+    tbody.innerHTML = venueRow + champHeader + data.map((p, i) => {
+      const tierDivider = (i === TIER_SIZE && data.length > TIER_SIZE) ? challengerHeader : '';
       const rankLabel = i < 3 ? rankIcons[i] : (i + 1);
       const rankClass = i < 3 ? `rank rank-${i + 1}` : 'rank';
       const ini1 = initials(p.player1);
@@ -1113,7 +1138,7 @@
         return `<td>${v}</td>`;
       }).join('');
 
-      return `
+      return tierDivider + `
         <tr>
           <td class="${rankClass}">${rankLabel}</td>
           <td>
