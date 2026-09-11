@@ -1493,7 +1493,7 @@ function saveSession(nameOverride) {
   toast('Saving…');
   fetch(SCRIPT_URL, {
     method: 'POST', mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
   })
   .then(() => { toast('✓ Session saved!'); S.saved = true; persist(); })
