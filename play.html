@@ -488,7 +488,8 @@ function infoBoxHTML(n, rounds, mpr, total) {
 }
 
 function infoNote(n, rounds, mpr) {
-  if (n < 4) return 'Add at least 4 teams to start.';
+  const minTeams = S.courts === 1 ? 2 : 4;
+  if (n < minTeams) return `Add at least ${minTeams} teams to start.`;
   const total = n * (n - 1) / 2;
   const lastRound = total % S.courts;
   const note = lastRound > 0
@@ -610,7 +611,8 @@ function refreshInfo() {
 
 function startSession() {
   if (S.gameMode === 'mexicano') { startMexicanoSession(); return; }
-  if (S.teams.length < 4) { toast('Need at least 4 teams'); return; }
+  const minTeams = S.courts === 1 ? 2 : 4;
+  if (S.teams.length < minTeams) { toast('Need at least ' + minTeams + ' teams'); return; }
   try { S.schedule = buildSchedule(); }
   catch(e) { toast('Error: ' + e.message); console.error(e); return; }
   if (!S.schedule || !S.schedule.length) { toast('Schedule empty — check team count'); return; }
