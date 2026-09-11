@@ -340,7 +340,7 @@ function newSession(mode) {
   if (mode === 'mexicano') {
     S = {
       gameMode: 'mexicano',
-      scoringMode: 'points', pointsPerMatch: 24,
+      scoringMode: 'points', pointsPerMatch: 21,
       courts: 2, numRounds: 6,
       players: Array.from({length:8}, (_,i) => ({
         id:'p'+(i+1), name:'Player '+(i+1), color: COLORS[i % COLORS.length]
@@ -447,7 +447,7 @@ function scoringSubHTML(mode) {
   return `
     <div class="lbl" style="margin-bottom:8px;">Points per match</div>
     <div class="tg" id="pts-tg">
-      ${[16,24,32].map(p => `<button class="tg-btn ${S.pointsPerMatch===p?'on':''}" onclick="setPts(${p})">${p} pts</button>`).join('')}
+      ${[16,21,32].map(p => `<button class="tg-btn ${S.pointsPerMatch===p?'on':''}" onclick="setPts(${p})">${p} pts</button>`).join('')}
     </div>
     <div class="dim" style="margin-top:8px;font-size:12px;">Both teams' scores must add up to this total.</div>`;
 }
