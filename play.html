@@ -233,6 +233,9 @@ const COLORS       = ['#f5c842','#60a5fa','#f87171','#4ade80','#fb923c','#a78bfa
 const COURT_COLORS = ['#f5c842','#60a5fa','#f87171','#4ade80'];
 const KEY          = 'cc-team-americano';
 
+// ── Sheets integration — paste your Apps Script deployment URL here ───────────
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzcZ-vggKtY9gVTuxecY86PS-RkSZMCjiwkhl3XFn3zgfr5l5L5aHeWXbbx5-I2sNoy/exec';
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let S = null;
 function load() {
@@ -249,9 +252,10 @@ function go(screen) {
   const app = document.getElementById('app');
   app.className = 'app screen';
   app.innerHTML =
-    screen === 'home'  ? homeHTML()  :
-    screen === 'setup' ? setupHTML() :
-    screen === 'play'  ? playHTML()  : finalHTML();
+    screen === 'home'    ? homeHTML()    :
+    screen === 'setup'   ? setupHTML()   :
+    screen === 'play'    ? playHTML()    :
+    screen === 'history' ? historyHTML() : finalHTML();
 }
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
@@ -318,7 +322,17 @@ function homeHTML() {
             </div>
           </div>`).join('')}
       </div>
-    `}`;
+    `}
+
+    <!-- History link -->
+    <div style="margin-top:16px;text-align:center;">
+      <button onclick="loadHistory()"
+        style="background:none;border:none;color:var(--muted);font-size:13px;
+               font-family:inherit;cursor:pointer;touch-action:manipulation;
+               text-decoration:underline;text-underline-offset:3px;">
+        📋 View past sessions
+      </button>
+    </div>`;
 }
 
 function newSession(mode) {
@@ -1310,9 +1324,15 @@ function finalHTML() {
           }).join('')}
         </div>`).join('')}
 
-      <div style="display:flex;gap:10px;margin-top:24px;">
-        <button class="btn btn-outline" onclick="go('play')">← Back</button>
-        <button class="btn btn-gold" style="flex:1;" onclick="confirmNew()">New Session</button>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;">
+        <button class="btn btn-gold btn-full" onclick="promptSaveSession()"
+          style="${S.saved?'opacity:0.5;':''}">
+          ${S.saved ? '✓ Saved' : '💾 Save Session'}
+        </button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" onclick="go('play')">← Back</button>
+          <button class="btn btn-outline" style="flex:1;" onclick="confirmNew()">New Session</button>
+        </div>
       </div>`;
   }
 
@@ -1392,9 +1412,15 @@ function finalHTML() {
         }).join('')}
       </div>`).join('')}
 
-    <div style="display:flex;gap:10px;margin-top:24px;">
-      <button class="btn btn-outline" onclick="go('play')">← Back</button>
-      <button class="btn btn-gold" style="flex:1;" onclick="confirmNew()">New Session</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;">
+      <button class="btn btn-gold btn-full" onclick="promptSaveSession()"
+        style="${S.saved?'opacity:0.5;':''}">
+        ${S.saved ? '✓ Saved' : '💾 Save Session'}
+      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="go('play')">← Back</button>
+        <button class="btn btn-outline" style="flex:1;" onclick="confirmNew()">New Session</button>
+      </div>
     </div>`;
 }
 
@@ -1446,6 +1472,95 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Sheets: save & history ────────────────────────────────────────────────────
+function saveSession(nameOverride) {
+  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_APPS')) { toast('Set SCRIPT_URL in code first'); return; }
+  const st = S.gameMode === 'mexicano' ? mexicanoStandings() : standings();
+  const payload = {
+    sessionName:   nameOverride || S.sessionName || '',
+    gameMode:      S.gameMode,
+    scoringMode:   S.scoringMode,
+    setFormat:     S.setFormat,
+    pointsPerMatch:S.pointsPerMatch,
+    courts:        S.courts,
+    teams:         S.teams   || [],
+    players:       S.players || [],
+    standings:     st,
+    schedule:      S.schedule
+  };
+  toast('Saving…');
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(() => { toast('✓ Session saved!'); S.saved = true; persist(); })
+  .catch(() => toast('Save failed — check your connection'));
+}
+
+function promptSaveSession() {
+  const name = prompt('Name this session (e.g. "Week 3 – Mexicano"):', S.sessionName || '');
+  if (name === null) return;
+  S.sessionName = name.trim();
+  persist();
+  saveSession(S.sessionName);
+}
+
+function loadHistory() {
+  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_APPS')) { toast('Set SCRIPT_URL in code first'); return; }
+  go('history');
+  const cb = 'cb_' + Date.now();
+  const script = document.createElement('script');
+  script.src = SCRIPT_URL + '?callback=' + cb;
+  window[cb] = (data) => {
+    delete window[cb]; script.remove();
+    renderHistory(data.sessions || []);
+  };
+  script.onerror = () => { delete window[cb]; script.remove(); renderHistory(null); };
+  document.body.appendChild(script);
+}
+
+function renderHistory(sessions) {
+  const el = document.getElementById('history-list');
+  if (!el) return;
+  if (!sessions) { el.innerHTML = `<div class="dim" style="padding:20px 0;">Failed to load. Check your connection.</div>`; return; }
+  if (!sessions.length) { el.innerHTML = `<div class="dim" style="padding:20px 0;">No saved sessions yet.</div>`; return; }
+  el.innerHTML = sessions.map(s => {
+    const date = s.timestamp ? new Date(s.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    const time = s.timestamp ? new Date(s.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+    const mode = s.gameMode === 'mexicano' ? '🔥 Mexicano' : '🎾 Americano';
+    const top3 = (s.standings||[]).slice(0,3);
+    const medals = ['🥇','🥈','🥉'];
+    const nameList = top3.map((p,i) => {
+      const ent = (s.teams||[]).find(t=>t.id===p.id) || (s.standings||[]).find(t=>t.id===p.id);
+      return `${medals[i]} ${ent ? (ent.name||p.id) : p.id}`;
+    }).join(' · ');
+    return `
+      <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div>
+            <div style="font-weight:700;font-size:14px;">${esc(s.sessionName || 'Unnamed session')}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${date} · ${time}</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);">${mode}</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${s.format||''} · ${s.courts||''} court${s.courts!==1?'s':''} · ${s.rounds||''} rounds</div>
+        ${nameList ? `<div style="font-size:12px;font-weight:600;">${nameList}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function historyHTML() {
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <button class="btn btn-outline" onclick="go('home')" style="padding:8px 14px;font-size:13px;">← Back</button>
+      <div class="h2">Past Sessions</div>
+    </div>
+    <div id="history-list">
+      <div class="dim" style="padding:20px 0;text-align:center;">Loading…</div>
+    </div>`;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
