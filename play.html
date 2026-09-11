@@ -569,8 +569,9 @@ function setPts(p) {
 function setCourts(c) {
   S.courts = c;
   document.querySelectorAll('#courts-tg .tg-btn').forEach(b =>
-    b.classList.toggle('on', b.textContent.trim().startsWith(c+' ')));
-  refreshInfo();
+    b.classList.toggle('on', parseInt(b.textContent) === c));
+  if (S.gameMode === 'mexicano') refreshMexInfo();
+  else refreshInfo();
 }
 
 function updTeam(id, key, val) {
