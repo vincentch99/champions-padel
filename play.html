@@ -103,8 +103,9 @@
       cursor: pointer; transition: all 0.12s; touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
-    .tg-btn.on      { background: var(--gold); color: #0c0c0c; border-color: var(--gold); font-weight: 700; }
-    .tg-btn.on-blue { background: var(--blue); color: #0c0c0c; border-color: var(--blue); font-weight: 700; }
+    .tg-btn.on       { background: var(--gold);  color: #0c0c0c; border-color: var(--gold);  font-weight: 700; }
+    .tg-btn.on-blue  { background: var(--blue);  color: #0c0c0c; border-color: var(--blue);  font-weight: 700; }
+    .tg-btn.on-green { background: var(--green); color: #0c0c0c; border-color: var(--green); font-weight: 700; }
     .tg-btn:active  { opacity: 0.75; }
 
     /* ── Typography ── */
@@ -384,11 +385,12 @@ function americanoSetupHTML() {
     <div class="card" style="margin-bottom:10px;">
       <div class="lbl" style="margin-bottom:10px;">Scoring format</div>
       <div class="tg" id="mode-tg">
-        <button class="tg-btn ${tennis?'on-blue':''}" onclick="setMode('tennis')">🎾 Tennis</button>
-        <button class="tg-btn ${!tennis?'on':''}" onclick="setMode('points')">📍 Points</button>
+        <button class="tg-btn ${S.scoringMode==='tennis'?'on-blue':''}" onclick="setMode('tennis')">🎾 Tennis</button>
+        <button class="tg-btn ${S.scoringMode==='points'?'on':''}" onclick="setMode('points')">📍 Points</button>
+        <button class="tg-btn ${S.scoringMode==='firstto'?'on-green':''}" onclick="setMode('firstto')">🏅 First to</button>
       </div>
       <div id="scoring-sub" style="margin-top:14px;">
-        ${scoringSubHTML(tennis)}
+        ${scoringSubHTML(S.scoringMode)}
       </div>
     </div>
 
@@ -420,7 +422,8 @@ function americanoSetupHTML() {
     </div>`;
 }
 
-function scoringSubHTML(tennis) {
+function scoringSubHTML(mode) {
+  var tennis = mode === 'tennis' || mode === true;
   if (tennis) {
     return `
       <div class="lbl" style="margin-bottom:8px;">Match format</div>
@@ -429,8 +432,16 @@ function scoringSubHTML(tennis) {
         <button class="tg-btn ${S.setFormat===5?'on-blue':''}" onclick="setFmt(5)">Best of 5</button>
       </div>
       <div class="dim" style="margin-top:8px;font-size:12px;" id="fmt-hint">
-        Play all ${S.setFormat} sets — tap the final score, e.g. ${Math.ceil(S.setFormat/2)}-${Math.floor(S.setFormat/2)} or ${S.setFormat}-0.
+        Play all ${S.setFormat} games — scores sum to ${S.setFormat}, e.g. ${Math.ceil(S.setFormat/2)}–${Math.floor(S.setFormat/2)} or ${S.setFormat}–0.
       </div>`;
+  }
+  if (mode === 'firstto') {
+    return `
+      <div class="lbl" style="margin-bottom:8px;">First to</div>
+      <div class="tg" id="ft-tg">
+        ${[3,4,5,6].map(t => `<button class="tg-btn ${(S.firstToTarget||4)===t?'on-green':''}" onclick="setFirstTo(${t})">${t} wins</button>`).join('')}
+      </div>
+      <div class="dim" style="margin-top:8px;font-size:12px;">First team to reach ${S.firstToTarget||4} wins takes the match.</div>`;
   }
   return `
     <div class="lbl" style="margin-bottom:8px;">Points per match</div>
@@ -494,12 +505,24 @@ function teamCardHTML(t) {
 // Setup actions
 function setMode(m) {
   S.scoringMode = m;
-  document.querySelectorAll('#mode-tg .tg-btn').forEach(b => {
-    const isTennis = b.textContent.includes('Tennis');
-    b.className = 'tg-btn' + (isTennis && m==='tennis' ? ' on-blue' : !isTennis && m==='points' ? ' on' : '');
+  if (m === 'firstto' && !S.firstToTarget) S.firstToTarget = 4;
+  document.querySelectorAll('#mode-tg .tg-btn').forEach(function(b) {
+    var t = b.textContent.trim();
+    b.className = 'tg-btn' +
+      (t.includes('Tennis') && m==='tennis' ? ' on-blue'  :
+       t.includes('Points') && m==='points' ? ' on'       :
+       t.includes('First')  && m==='firstto'? ' on-green' : '');
   });
-  document.getElementById('scoring-sub').innerHTML = scoringSubHTML(m === 'tennis');
-  refreshInfo();
+  document.getElementById('scoring-sub').innerHTML = scoringSubHTML(m);
+  if (typeof refreshInfo === 'function') refreshInfo();
+  if (typeof refreshMexInfo === 'function') refreshMexInfo();
+}
+
+function setFirstTo(t) {
+  S.firstToTarget = t;
+  document.querySelectorAll('#ft-tg .tg-btn').forEach(function(b) {
+    b.className = 'tg-btn' + (parseInt(b.textContent) === t ? ' on-green' : '');
+  });
 }
 
 function setFmt(f) {
@@ -640,8 +663,9 @@ function mexicanoSetupHTML() {
       <div class="tg" id="mode-tg">
         <button class="tg-btn ${S.scoringMode==='points'?'on':''}" onclick="setMode('points')">📍 Points</button>
         <button class="tg-btn ${S.scoringMode==='tennis'?'on-blue':''}" onclick="setMode('tennis')">🎾 Tennis</button>
+        <button class="tg-btn ${S.scoringMode==='firstto'?'on-green':''}" onclick="setMode('firstto')">🏅 First to</button>
       </div>
-      <div id="scoring-sub" style="margin-top:14px;">${scoringSubHTML(S.scoringMode==='tennis')}</div>
+      <div id="scoring-sub" style="margin-top:14px;">${scoringSubHTML(S.scoringMode)}</div>
     </div>
 
     <!-- Courts -->
@@ -872,8 +896,8 @@ function playHTML() {
         </div>
         <div style="text-align:right;">
           <div class="lbl">Format</div>
-          <div style="font-size:13px;font-weight:700;color:${tennis?'var(--blue)':'var(--gold)'};">
-            ${tennis ? `Bo${S.setFormat}` : `${S.pointsPerMatch} pts`}
+          <div style="font-size:13px;font-weight:700;color:${tennis?'var(--blue)':S.scoringMode==='firstto'?'var(--green)':'var(--gold)'};">
+            ${tennis ? `Bo${S.setFormat}` : S.scoringMode==='firstto' ? `First to ${S.firstToTarget||4}` : `${S.pointsPerMatch} pts`}
           </div>
         </div>
       </div>
@@ -1110,9 +1134,10 @@ function liveScoreCardHTML(m, labelA, subtA, colorA, labelB, subtB, colorB) {
   }
 
   // ── Active / live state ──
-  const hint  = tennis ? `${S.setFormat} games total` : `Play to ${S.pointsPerMatch} pts`;
-  const total = tennis ? (S.setFormat || 3) : (S.pointsPerMatch || 32);
-  const pct   = Math.round(((sA+sB)/total)*100);
+  const firstto = S.scoringMode === 'firstto';
+  const hint  = tennis ? `${S.setFormat} games total` : firstto ? `First to ${S.firstToTarget||4}` : `Play to ${S.pointsPerMatch} pts`;
+  const total = tennis ? (S.setFormat || 3) : firstto ? (S.firstToTarget || 4) : (S.pointsPerMatch || 32);
+  const pct   = firstto ? Math.round((Math.max(sA,sB)/total)*100) : Math.round(((sA+sB)/total)*100);
   const numColorA = aWins ? colorA : bWins ? 'var(--muted)' : 'var(--text)';
   const numColorB = bWins ? colorB : aWins ? 'var(--muted)' : 'var(--text)';
 
@@ -1151,16 +1176,23 @@ function liveScoreCardHTML(m, labelA, subtA, colorA, labelB, subtB, colorB) {
       </div>
 
       <div style="margin-top:16px;">
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;">
-          <span style="color:var(--muted);">${tennis ? 'Games' : 'Total'}</span>
-          <span id="prog-txt-${m.id}" style="font-weight:700;color:${sA+sB===total?'var(--green)':'var(--text)'};">${sA+sB} / ${total}</span>
-        </div>
-        <div class="prog" style="margin:0;">
-          <div class="prog-fill" id="prog-${m.id}" style="width:${pct}%;background:${sA+sB===total?'var(--green)':'var(--gold)'};"></div>
-        </div>
-        ${sA+sB>0 && sA+sB<total ? `
-          <button class="btn btn-outline btn-full" style="margin-top:12px;font-size:13px;" onclick="confirmScore('${m.id}')">✓ Confirm Score</button>
-        ` : ''}
+        ${firstto ? `
+          <div style="text-align:center;font-size:12px;color:var(--muted);">
+            First to <strong style="color:var(--green);">${S.firstToTarget||4}</strong> wins the match
+          </div>
+          <div class="prog" style="margin:8px 0 0;">
+            <div class="prog-fill" id="prog-${m.id}" style="width:${pct}%;background:var(--green);"></div>
+          </div>` : `
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;">
+            <span style="color:var(--muted);">${tennis ? 'Games' : 'Total'}</span>
+            <span id="prog-txt-${m.id}" style="font-weight:700;color:${sA+sB===total?'var(--green)':'var(--text)'};">${sA+sB} / ${total}</span>
+          </div>
+          <div class="prog" style="margin:0;">
+            <div class="prog-fill" id="prog-${m.id}" style="width:${pct}%;background:${sA+sB===total?'var(--green)':'var(--gold)'};"></div>
+          </div>
+          ${sA+sB>0 && sA+sB<total ? `
+            <button class="btn btn-outline btn-full" style="margin-top:12px;font-size:13px;" onclick="confirmScore('${m.id}')">✓ Confirm Score</button>
+          ` : ''}`}
       </div>
     </div>`;
 }
@@ -1177,16 +1209,30 @@ function tennisCardHTML(m) {
 
 // ── Score adjustment (▲▼ buttons) ─────────────────────────────────────────────
 function adj(id, side, delta) {
-  const m = findMatch(id); if (!m) return;
-  const tennis   = S.scoringMode === 'tennis';
-  const key      = side === 'A' ? (tennis ? 'setsA'  : 'scoreA') : (tennis ? 'setsB'  : 'scoreB');
-  const otherKey = side === 'A' ? (tennis ? 'setsB'  : 'scoreB') : (tennis ? 'setsA'  : 'scoreA');
-  const target   = tennis ? (S.setFormat || 3) : (S.pointsPerMatch || 32);
-  const max      = target - (m[otherKey] || 0);
+  var m = findMatch(id); if (!m) return;
+  var mode = S.scoringMode;
+
+  if (mode === 'firstto') {
+    var key = side === 'A' ? 'scoreA' : 'scoreB';
+    var target = S.firstToTarget || 4;
+    m[key] = Math.max(0, (m[key] || 0) + delta);
+    if ((m.scoreA || 0) >= target || (m.scoreB || 0) >= target) {
+      m.done = true; persist(); reRenderCard(id);
+    } else {
+      persist(); updateScoreDOM(id, m);
+    }
+    return;
+  }
+
+  var tennis   = mode === 'tennis';
+  var key      = side === 'A' ? (tennis ? 'setsA'  : 'scoreA') : (tennis ? 'setsB'  : 'scoreB');
+  var otherKey = side === 'A' ? (tennis ? 'setsB'  : 'scoreB') : (tennis ? 'setsA'  : 'scoreA');
+  var target   = tennis ? (S.setFormat || 3) : (S.pointsPerMatch || 32);
+  var max      = target - (m[otherKey] || 0);
 
   m[key] = Math.max(0, Math.min(max, (m[key] || 0) + delta));
 
-  const total = (m[tennis?'setsA':'scoreA']||0) + (m[tennis?'setsB':'scoreB']||0);
+  var total = (m[tennis?'setsA':'scoreA']||0) + (m[tennis?'setsB':'scoreB']||0);
   if (total === target) {
     m.done = true; persist(); reRenderCard(id);
   } else {
@@ -1212,14 +1258,15 @@ function updateScoreDOM(id, m) {
   if (elA) { elA.textContent = sA; elA.style.color = aWins?colorA:bWins?'var(--muted)':'var(--text)'; }
   if (elB) { elB.textContent = sB; elB.style.color = bWins?colorB:aWins?'var(--muted)':'var(--text)'; }
 
-  const target = tennis ? (S.setFormat||3) : (S.pointsPerMatch||32);
-  const pct    = Math.round(((sA+sB)/target)*100);
-  const done   = sA+sB === target;
-  const pEl    = document.getElementById('prog-'+id);
-  const tEl    = document.getElementById('prog-txt-'+id);
-  if (pEl) { pEl.style.width = pct+'%'; pEl.style.background = done ? 'var(--green)' : 'var(--gold)'; }
+  var firstto = S.scoringMode === 'firstto';
+  var target  = tennis ? (S.setFormat||3) : firstto ? (S.firstToTarget||4) : (S.pointsPerMatch||32);
+  var pct     = firstto ? Math.round((Math.max(sA,sB)/target)*100) : Math.round(((sA+sB)/target)*100);
+  var done    = firstto ? (sA>=target||sB>=target) : sA+sB===target;
+  var pEl     = document.getElementById('prog-'+id);
+  var tEl     = document.getElementById('prog-txt-'+id);
+  if (pEl) { pEl.style.width = pct+'%'; pEl.style.background = done ? 'var(--green)' : firstto ? 'var(--green)' : 'var(--gold)'; }
   if (tEl) { tEl.textContent = (sA+sB)+' / '+target; tEl.style.color = done ? 'var(--green)' : 'var(--text)'; }
-  if (sA+sB>0 && sA+sB<target && !document.getElementById('confirm-'+id)) reRenderCard(id);
+  if (!firstto && !done && sA+sB>0 && !document.getElementById('confirm-'+id)) reRenderCard(id);
 }
 
 function reRenderCard(id) {
@@ -1438,7 +1485,22 @@ function findMatch(id) {
 }
 
 function standings() {
-  return S.scoringMode === 'tennis' ? tennisStandings() : pointsStandings();
+  if (S.scoringMode === 'tennis') return tennisStandings();
+  if (S.scoringMode === 'firstto') return firstToStandings();
+  return pointsStandings();
+}
+
+function firstToStandings() {
+  const map = {};
+  S.teams.forEach(t => { map[t.id] = { id:t.id, w:0, l:0, scored:0, conceded:0 }; });
+  S.schedule.forEach(r => r.forEach(m => {
+    if (!m.done) return;
+    map[m.teamA].scored += m.scoreA; map[m.teamA].conceded += m.scoreB;
+    map[m.teamB].scored += m.scoreB; map[m.teamB].conceded += m.scoreA;
+    if (m.scoreA > m.scoreB) { map[m.teamA].w++; map[m.teamB].l++; }
+    else                     { map[m.teamB].w++; map[m.teamA].l++; }
+  }));
+  return Object.values(map).sort((a,b) => b.w-a.w || (b.scored-b.conceded)-(a.scored-a.conceded));
 }
 
 function pointsStandings() {
