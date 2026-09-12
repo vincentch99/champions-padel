@@ -319,13 +319,15 @@ function homeHTML() {
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
       ${modeCard('👫','Team Americano','Fixed pairs · Round-robin','var(--gold)',
         'Set fixed male + female pairs. Every team plays every other team once. Highest total score wins.','americano')}
-      ${modeCard('🔥','Mexicano','Dynamic pairing · Ranking-based','var(--blue)',
+      ${modeCard('🏅','Team Mexicano','Fixed pairs · Dynamic ranking','var(--green)',
+        'Fixed pairs re-matched every round by standings. Top teams face top teams. Play as many rounds as you want.','team-mexicano')}
+      ${modeCard('🔥','Mexicano','Individual · Dynamic ranking','var(--blue)',
         'Players re-pair every round based on current standings. Top players face top players — everyone competes at their level.','mexicano')}
     </div>
 
     ${has ? `
       <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;flex-direction:column;gap:8px;">
-        <div class="lbl">Saved session · ${has && S.gameMode === 'mexicano' ? '🔥 Mexicano' : '👫 Americano'}</div>
+        <div class="lbl">Saved session · ${S.gameMode==='mexicano'?'🔥 Mexicano':S.gameMode==='team-mexicano'?'🏅 Team Mexicano':'👫 Americano'}</div>
         <button class="btn btn-outline btn-full" onclick="resume()">
           ▶ Resume · ${S.gameMode==='mexicano' ? (S.players||[]).length+' players' : (S.teams||[]).length+' teams'}
           · Round ${S.currentRound+1}/${S.schedule.length||'?'}
@@ -363,6 +365,21 @@ function homeHTML() {
 }
 
 function newSession(mode) {
+  if (mode === 'team-mexicano') {
+    S = {
+      gameMode: 'team-mexicano',
+      scoringMode: 'points', pointsPerMatch: 21,
+      courts: 2,
+      teams: [
+        { id:'t1', name:'Team 1', p1:'', p2:'', color: COLORS[0], byeCount:0 },
+        { id:'t2', name:'Team 2', p1:'', p2:'', color: COLORS[1], byeCount:0 },
+        { id:'t3', name:'Team 3', p1:'', p2:'', color: COLORS[2], byeCount:0 },
+        { id:'t4', name:'Team 4', p1:'', p2:'', color: COLORS[3], byeCount:0 },
+      ],
+      schedule: [], currentRound: 0, status: 'setup',
+    };
+    go('setup'); return;
+  }
   if (mode === 'mexicano') {
     S = {
       gameMode: 'mexicano',
@@ -395,7 +412,9 @@ function confirmDiscard() { if (confirm('Discard the current session?')) { wipe(
 
 // ── SETUP ─────────────────────────────────────────────────────────────────────
 function setupHTML() {
-  return S.gameMode === 'mexicano' ? mexicanoSetupHTML() : americanoSetupHTML();
+  if (S.gameMode === 'mexicano') return mexicanoSetupHTML();
+  if (S.gameMode === 'team-mexicano') return teamMexicanoSetupHTML();
+  return americanoSetupHTML();
 }
 function americanoSetupHTML() {
   const { n, rounds, matchesPerRound, totalMatches } = scheduleInfo();
@@ -572,6 +591,7 @@ function setCourts(c) {
   document.querySelectorAll('#courts-tg .tg-btn').forEach(b =>
     b.classList.toggle('on', parseInt(b.textContent) === c));
   if (S.gameMode === 'mexicano') refreshMexInfo();
+  else if (S.gameMode === 'team-mexicano') refreshTmxInfo();
   else refreshInfo();
 }
 
@@ -590,7 +610,7 @@ function addTeam() {
   d.innerHTML = teamCardHTML(S.teams[S.teams.length-1]);
   li.appendChild(d.firstElementChild);
   document.getElementById('tc').textContent = S.teams.length;
-  refreshInfo();
+  if (S.gameMode === 'team-mexicano') refreshTmxInfo(); else refreshInfo();
 }
 
 function removeTeam(id) {
@@ -598,7 +618,7 @@ function removeTeam(id) {
   S.teams = S.teams.filter(t => t.id !== id);
   document.getElementById('tc-'+id)?.remove();
   document.getElementById('tc').textContent = S.teams.length;
-  refreshInfo();
+  if (S.gameMode === 'team-mexicano') refreshTmxInfo(); else refreshInfo();
 }
 
 function refreshInfo() {
@@ -611,6 +631,7 @@ function refreshInfo() {
 
 function startSession() {
   if (S.gameMode === 'mexicano') { startMexicanoSession(); return; }
+  if (S.gameMode === 'team-mexicano') { startTeamMexicanoSession(); return; }
   const minTeams = S.courts === 1 ? 2 : 4;
   if (S.teams.length < minTeams) { toast('Need at least ' + minTeams + ' teams'); return; }
   try { S.schedule = buildSchedule(); }
@@ -670,6 +691,139 @@ function buildSchedule() {
   }
 
   return rounds;
+}
+
+// ── TEAM MEXICANO ─────────────────────────────────────────────────────────────
+
+function teamMexicanoSetupHTML() {
+  const n = S.teams.length;
+  const matchesPerRound = Math.min(S.courts, Math.floor(n / 2));
+  const sittingOut = n - matchesPerRound * 2;
+  return `
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span style="font-size:22px;">🏅</span>
+        <div class="h2">Team Mexicano Setup</div>
+      </div>
+      <div class="dim">Fixed pairs re-matched each round by standings. Play until time ends.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="lbl" style="margin-bottom:10px;">Scoring format</div>
+      <div class="tg" id="mode-tg">
+        <button class="tg-btn ${S.scoringMode==='points'?'on':''}" onclick="setMode('points')">📍 Points</button>
+        <button class="tg-btn ${S.scoringMode==='tennis'?'on-blue':''}" onclick="setMode('tennis')">🎾 Tennis</button>
+        <button class="tg-btn ${S.scoringMode==='firstto'?'on-green':''}" onclick="setMode('firstto')">🏅 First to</button>
+      </div>
+      <div id="scoring-sub" style="margin-top:14px;">${scoringSubHTML(S.scoringMode)}</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="lbl" style="margin-bottom:10px;">Courts</div>
+      <div class="tg" id="courts-tg">
+        ${[1,2,3,4].map(c=>`<button class="tg-btn ${S.courts===c?'on':''}" onclick="setCourts(${c})">${c}</button>`).join('')}
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="lbl">Teams <span id="tc" style="color:var(--gold);margin-left:4px;">${n}</span>
+        ${n < 2 ? `<span style="color:var(--red);margin-left:6px;">· need at least 2</span>`
+          : sittingOut > 0 ? `<span style="color:var(--muted);margin-left:6px;">· ${sittingOut} sit${sittingOut===1?'s':''} out/round</span>` : ''}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="addTeam()">+ Add Team</button>
+    </div>
+    <div id="teams-list">${S.teams.map(teamCardHTML).join('')}</div>
+
+    <div style="margin:16px 0 8px;">
+      <div class="info-box" id="tmx-info">
+        <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Teams</div></div>
+        <div class="info-cell"><div class="info-val">${matchesPerRound}</div><div class="info-key">Matches/Round</div></div>
+        <div class="info-cell"><div class="info-val">∞</div><div class="info-key">Rounds</div></div>
+      </div>
+      <div class="dim" style="margin-top:8px;font-size:11px;" id="tmx-note">
+        ${sittingOut > 0 ? sittingOut+' team'+(sittingOut>1?'s':'')+' sit out each round · pairings by standings' : 'All teams play each round · pairings by standings'}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" onclick="go('home')">← Back</button>
+      <button class="btn btn-gold" style="flex:1;" onclick="startSession()">Start Session →</button>
+    </div>`;
+}
+
+function refreshTmxInfo() {
+  const n = S.teams.length;
+  const matchesPerRound = Math.min(S.courts, Math.floor(n / 2));
+  const sittingOut = n - matchesPerRound * 2;
+  const tc = document.getElementById('tc');
+  const ib = document.getElementById('tmx-info');
+  const note = document.getElementById('tmx-note');
+  if (tc) tc.textContent = n;
+  if (ib) ib.innerHTML = `
+    <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Teams</div></div>
+    <div class="info-cell"><div class="info-val">${matchesPerRound}</div><div class="info-key">Matches/Round</div></div>
+    <div class="info-cell"><div class="info-val">∞</div><div class="info-key">Rounds</div></div>`;
+  if (note) note.textContent = sittingOut > 0
+    ? sittingOut+' team'+(sittingOut>1?'s':'')+' sit out each round · pairings by standings'
+    : 'All teams play each round · pairings by standings';
+}
+
+function startTeamMexicanoSession() {
+  const minTeams = S.courts === 1 ? 2 : 4;
+  if (S.teams.length < minTeams) { toast('Need at least '+minTeams+' teams'); return; }
+  S.teams.forEach(function(t){ if (t.byeCount === undefined) t.byeCount = 0; });
+  const order = S.teams.map(function(t){ return t.id; });
+  S.schedule = [buildTeamMexicanoRound(0, shuffleIds(order))];
+  S.currentRound = 0; S.status = 'playing';
+  persist(); go('play');
+}
+
+function buildTeamMexicanoRound(roundIdx, teamOrder) {
+  const n = teamOrder.length;
+  const matchesPerRound = Math.min(S.courts, Math.floor(n / 2));
+  const numPlaying = matchesPerRound * 2;
+  const numByes = n - numPlaying;
+
+  var byeTeamIds = [];
+  if (numByes > 0) {
+    const ranked = teamOrder.slice().sort(function(a, b) {
+      const ta = S.teams.find(function(t){ return t.id === a; });
+      const tb = S.teams.find(function(t){ return t.id === b; });
+      const ba = ta ? (ta.byeCount||0) : 0;
+      const bb = tb ? (tb.byeCount||0) : 0;
+      if (ba !== bb) return ba - bb;
+      return teamOrder.indexOf(b) - teamOrder.indexOf(a);
+    });
+    byeTeamIds = ranked.slice(0, numByes);
+    byeTeamIds.forEach(function(id) {
+      const t = S.teams.find(function(t){ return t.id === id; });
+      if (t) t.byeCount = (t.byeCount||0) + 1;
+    });
+  }
+
+  const playing = teamOrder.filter(function(id){ return byeTeamIds.indexOf(id) === -1; });
+  const matches = [];
+  for (var i = 0; i < matchesPerRound; i++) {
+    matches.push({
+      id: 'tmx_r'+roundIdx+'_'+i, court: i+1,
+      teamA: playing[i*2], teamB: playing[i*2+1],
+      scoreA: null, scoreB: null, setsA: null, setsB: null, done: false,
+    });
+  }
+  matches.byeTeams = byeTeamIds;
+  return matches;
+}
+
+function teamMexicanoNextRound() {
+  if (!S.schedule[S.currentRound].every(function(m){ return m.done; })) {
+    toast('Complete all matches first'); return;
+  }
+  const st = standings();
+  const order = st.map(function(s){ return s.id; });
+  const next = buildTeamMexicanoRound(S.schedule.length, order);
+  S.schedule.push(next);
+  S.currentRound = S.schedule.length - 1;
+  persist(); go('play');
 }
 
 // ── MEXICANO ──────────────────────────────────────────────────────────────────
@@ -1052,6 +1206,18 @@ function playHTML() {
             </div>`;
           }).join('')}
         </div>
+      </div>` : S.gameMode === 'team-mexicano' && round.byeTeams && round.byeTeams.length > 0 ? `
+      <div style="margin-top:10px;padding:12px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;">Sitting Out This Round</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;">
+          ${round.byeTeams.map(id => {
+            const t = team(id);
+            return `<div style="display:flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(255,255,255,0.06);border-radius:20px;font-size:12px;font-weight:600;">
+              <div style="width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
+              ${t.name}
+            </div>`;
+          }).join('')}
+        </div>
       </div>` : ''}
 
     <!-- Finish button -->
@@ -1061,6 +1227,12 @@ function playHTML() {
         if (S.gameMode === 'mexicano') {
           if (S.schedule.length >= S.numRounds && S.currentRound === S.schedule.length - 1 && roundDone)
             return `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`;
+          return '';
+        }
+        if (S.gameMode === 'team-mexicano') {
+          if (roundDone) return `
+            <button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>
+            <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="teamMexicanoNextRound()">Next Round →</button>`;
           return '';
         }
         if (allDone) return `
