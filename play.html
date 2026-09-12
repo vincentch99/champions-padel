@@ -717,7 +717,8 @@ function mexicanoSetupHTML() {
     <!-- Players -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <div class="lbl">Players <span id="pc" style="color:var(--gold);margin-left:4px;">${n}</span>
-        ${n%4!==0 ? `<span style="color:var(--red);margin-left:6px;">· needs multiple of 4</span>` : ''}
+        ${n < 4 ? `<span style="color:var(--red);margin-left:6px;">· need at least 4</span>`
+          : n % 4 !== 0 ? `<span style="color:var(--muted);margin-left:6px;">· ${n%4} sit${n%4===1?'s':''} out/round</span>` : ''}
       </div>
       <button class="btn btn-outline btn-sm" onclick="addPlayer()">+ Add</button>
     </div>
@@ -732,7 +733,9 @@ function mexicanoSetupHTML() {
         <div class="info-cell"><div class="info-val">${S.numRounds * actualCourts}</div><div class="info-key">Total Matches</div></div>
       </div>
       <div class="dim" style="margin-top:8px;font-size:11px;" id="mex-note">
-        ${n%4!==0 ? '⚠ Add '+(4-n%4)+' more players (need multiple of 4)' : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round'}
+        ${n < 4 ? '⚠ Need at least 4 players'
+          : n%4!==0 ? Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · '+( n%4)+' player'+(n%4>1?'s':'')+' sit out each round'
+          : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round'}
       </div>
     </div>
 
@@ -797,14 +800,16 @@ function refreshMexInfo() {
     <div class="info-cell"><div class="info-val">${courts}</div><div class="info-key">Courts</div></div>
     <div class="info-cell"><div class="info-val">${S.numRounds}</div><div class="info-key">Rounds</div></div>
     <div class="info-cell"><div class="info-val">${S.numRounds*courts}</div><div class="info-key">Total Matches</div></div>`;
-  if (note) note.textContent = n%4!==0
-    ? '⚠ Add '+(4-n%4)+' more players (need multiple of 4)'
-    : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round';
+  if (note) note.textContent = n < 4
+    ? '⚠ Need at least 4 players'
+    : n%4!==0
+      ? Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · '+(n%4)+' player'+(n%4>1?'s':'')+' sit out each round'
+      : Math.floor(n/4)+' match'+(Math.floor(n/4)>1?'es':'')+' per round · pairings change every round';
 }
 
 function startMexicanoSession() {
-  if (S.players.length < 4)         { toast('Need at least 4 players'); return; }
-  if (S.players.length % 4 !== 0)   { toast('Players must be a multiple of 4'); return; }
+  if (S.players.length < 4) { toast('Need at least 4 players'); return; }
+  S.players.forEach(p => { if (p.byeCount === undefined) p.byeCount = 0; });
   const firstRound = buildMexicanoRound(0, shuffleIds(S.players.map(p=>p.id)));
   S.schedule = [firstRound];
   S.currentRound = 0; S.status = 'playing';
@@ -821,17 +826,41 @@ function shuffleIds(ids) {
 }
 
 function buildMexicanoRound(roundIdx, playerOrder) {
+  const n = playerOrder.length;
+  const courts = Math.min(S.courts, Math.floor(n / 4));
+  const numPlaying = courts * 4;
+  const numByes = n - numPlaying;
+
+  // Select who sits out: fewest prior byes first; ties broken by worst rank (end of playerOrder)
+  var byePlayerIds = [];
+  if (numByes > 0) {
+    const ranked = playerOrder.slice().sort(function(a, b) {
+      const pa = S.players.find(function(p){return p.id===a;});
+      const pb = S.players.find(function(p){return p.id===b;});
+      const ba = pa ? (pa.byeCount||0) : 0;
+      const bb = pb ? (pb.byeCount||0) : 0;
+      if (ba !== bb) return ba - bb; // fewest byes sits out first
+      return playerOrder.indexOf(b) - playerOrder.indexOf(a); // worse ranked sits out
+    });
+    byePlayerIds = ranked.slice(0, numByes);
+    byePlayerIds.forEach(function(id) {
+      const p = S.players.find(function(p){return p.id===id;});
+      if (p) p.byeCount = (p.byeCount||0) + 1;
+    });
+  }
+
+  const playing = playerOrder.filter(function(id){ return byePlayerIds.indexOf(id) === -1; });
   const matches = [];
-  const courts  = Math.min(S.courts, Math.floor(playerOrder.length/4));
   for (let i = 0; i < courts; i++) {
     const base = i * 4;
     matches.push({
       id: `mx_r${roundIdx}_${i}`, court: i+1,
-      playerA1: playerOrder[base],   playerA2: playerOrder[base+1],
-      playerB1: playerOrder[base+2], playerB2: playerOrder[base+3],
+      playerA1: playing[base],   playerA2: playing[base+1],
+      playerB1: playing[base+2], playerB2: playing[base+3],
       scoreA: null, scoreB: null, setsA: null, setsB: null, done: false,
     });
   }
+  matches.byePlayers = byePlayerIds;
   return matches;
 }
 
@@ -1010,6 +1039,19 @@ function playHTML() {
       </div>
     </div>
     <div id="matches">${round.map(m => matchCardHTML(m)).join('')}</div>
+    ${S.gameMode === 'mexicano' && round.byePlayers && round.byePlayers.length > 0 ? `
+      <div style="margin-top:10px;padding:12px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;">Sitting Out This Round</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;">
+          ${round.byePlayers.map(id => {
+            const p = mexPlayer(id);
+            return `<div style="display:flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(255,255,255,0.06);border-radius:20px;font-size:12px;font-weight:600;">
+              <div style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+              ${p.name}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
 
     <!-- Finish button -->
     <div style="margin-top:16px;">
