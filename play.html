@@ -368,7 +368,7 @@ function newSession(mode) {
       gameMode: 'mexicano',
       scoringMode: 'points', pointsPerMatch: 21,
       courts: 2, numRounds: 6,
-      players: Array.from({length:8}, (_,i) => ({
+      players: Array.from({length:4}, (_,i) => ({
         id:'p'+(i+1), name:'Player '+(i+1), color: COLORS[i % COLORS.length]
       })),
       schedule: [], currentRound: 0, status: 'setup',
