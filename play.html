@@ -616,6 +616,7 @@ function startSession() {
   try { S.schedule = buildSchedule(); }
   catch(e) { toast('Error: ' + e.message); console.error(e); return; }
   if (!S.schedule || !S.schedule.length) { toast('Schedule empty — check team count'); return; }
+  S.baseScheduleLength = S.schedule.length;
   S.currentRound = 0; S.status = 'playing';
   persist(); go('play');
 }
@@ -1062,9 +1063,10 @@ function playHTML() {
             return `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`;
           return '';
         }
-        return allDone
-          ? `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`
-          : '';
+        if (allDone) return `
+          <button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>
+          <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="addAmericanoRound()">+ Add Round</button>`;
+        return '';
       })()}
     </div>
 
@@ -1571,6 +1573,23 @@ function finalHTML() {
 
 function confirmNew() {
   if (confirm('Start a new session? Results will be cleared.')) { wipe(); go('home'); }
+}
+
+function addAmericanoRound() {
+  const base = S.baseScheduleLength || S.schedule.length;
+  const cycleIdx = (S.schedule.length - base) % base;
+  const template = S.schedule[cycleIdx];
+  const ts = Date.now();
+  const newRound = template.map(function(m, i) {
+    return {
+      id: 'xr_' + ts + '_' + i, court: m.court,
+      teamA: m.teamA, teamB: m.teamB,
+      scoreA: null, scoreB: null, setsA: null, setsB: null, done: false,
+    };
+  });
+  S.schedule.push(newRound);
+  S.currentRound = S.schedule.length - 1;
+  persist(); go('play');
 }
 
 // ── Share Results Card ─────────────────────────────────────────────────────────
