@@ -1010,8 +1010,8 @@ function buildMexicanoRound(roundIdx, playerOrder) {
     const base = i * 4;
     matches.push({
       id: `mx_r${roundIdx}_${i}`, court: i+1,
-      playerA1: playing[base],   playerA2: playing[base+1],
-      playerB1: playing[base+2], playerB2: playing[base+3],
+      playerA1: playing[base],   playerA2: playing[base+2],
+      playerB1: playing[base+1], playerB2: playing[base+3],
       scoreA: null, scoreB: null, setsA: null, setsB: null, done: false,
     });
   }
