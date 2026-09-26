@@ -384,7 +384,7 @@ function newSession(mode) {
     S = {
       gameMode: 'mexicano',
       scoringMode: 'points', pointsPerMatch: 21,
-      courts: 2, numRounds: 6,
+      courts: 2,
       players: Array.from({length:4}, (_,i) => ({
         id:'p'+(i+1), name:'Player '+(i+1), color: COLORS[i % COLORS.length]
       })),
@@ -861,14 +861,6 @@ function mexicanoSetupHTML() {
       </div>
     </div>
 
-    <!-- Rounds -->
-    <div class="card" style="margin-bottom:10px;">
-      <div class="lbl" style="margin-bottom:10px;">Number of rounds</div>
-      <div class="tg" id="rounds-tg">
-        ${[4,6,8,10].map(r=>`<button class="tg-btn ${S.numRounds===r?'on':''}" onclick="setNumRounds(${r})">${r}</button>`).join('')}
-      </div>
-    </div>
-
     <!-- Players -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <div class="lbl">Players <span id="pc" style="color:var(--gold);margin-left:4px;">${n}</span>
@@ -884,8 +876,7 @@ function mexicanoSetupHTML() {
       <div class="info-box" id="mex-info">
         <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Players</div></div>
         <div class="info-cell"><div class="info-val">${actualCourts}</div><div class="info-key">Courts</div></div>
-        <div class="info-cell"><div class="info-val">${S.numRounds}</div><div class="info-key">Rounds</div></div>
-        <div class="info-cell"><div class="info-val">${S.numRounds * actualCourts}</div><div class="info-key">Total Matches</div></div>
+        <div class="info-cell"><div class="info-val">∞</div><div class="info-key">Rounds</div></div>
       </div>
       <div class="dim" style="margin-top:8px;font-size:11px;" id="mex-note">
         ${n < 4 ? '⚠ Need at least 4 players'
@@ -953,8 +944,7 @@ function refreshMexInfo() {
   if (ib) ib.innerHTML = `
     <div class="info-cell"><div class="info-val">${n}</div><div class="info-key">Players</div></div>
     <div class="info-cell"><div class="info-val">${courts}</div><div class="info-key">Courts</div></div>
-    <div class="info-cell"><div class="info-val">${S.numRounds}</div><div class="info-key">Rounds</div></div>
-    <div class="info-cell"><div class="info-val">${S.numRounds*courts}</div><div class="info-key">Total Matches</div></div>`;
+    <div class="info-cell"><div class="info-val">∞</div><div class="info-key">Rounds</div></div>`;
   if (note) note.textContent = n < 4
     ? '⚠ Need at least 4 players'
     : n%4!==0
@@ -1021,7 +1011,6 @@ function buildMexicanoRound(roundIdx, playerOrder) {
 
 function mexicanoNextRound() {
   if (!S.schedule[S.currentRound].every(m=>m.done)) { toast('Complete all matches first'); return; }
-  if (S.schedule.length >= S.numRounds) { S.status='finished'; persist(); go('final'); return; }
   const st = mexicanoStandings();
   const order = st.map(s=>s.id);
   const next = buildMexicanoRound(S.schedule.length, order);
@@ -1148,18 +1137,13 @@ function playHTML() {
           R${i+1}${d?' ✓':''}
         </button>`;
       }).join('')}
-      ${S.gameMode==='mexicano' && S.schedule.length < S.numRounds && S.schedule[S.schedule.length-1].every(m=>m.done)
-        ? `<span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;color:var(--muted);border:1px dashed var(--border);display:flex;align-items:center;">
-             R${S.schedule.length+1}…
-           </span>`
-        : ''}
     </div>
 
     <!-- Current round matches -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div class="lbl">
         Round ${S.currentRound+1}
-        ${S.gameMode==='mexicano' ? `<span style="color:var(--muted);"> of ${S.numRounds}</span>` : `<span style="color:var(--muted);"> of ${S.schedule.length}</span>`}
+        <span style="color:var(--muted);"> of ${S.schedule.length}</span>
         <span style="color:var(--text);"> · ${round.filter(m=>m.done).length}/${round.length} done</span>
       </div>
       <!-- Prev / Next round nav -->
@@ -1181,8 +1165,8 @@ function playHTML() {
             style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
                    font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
                    border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">Next →</button>`;
-          if (S.gameMode === 'mexicano' && roundDone && S.schedule.length < S.numRounds)
-            return `<button onclick="mexicanoNextRound()"
+          if ((S.gameMode === 'mexicano' || S.gameMode === 'team-mexicano') && roundDone && S.currentRound === S.schedule.length - 1)
+            return `<button onclick="${S.gameMode==='mexicano'?'mexicanoNextRound':'teamMexicanoNextRound'}()"
               style="min-height:36px;padding:0 14px;border-radius:20px;font-size:13px;font-weight:700;
                      font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
                      border:1px solid var(--gold);background:var(--gold);color:#0c0c0c;cursor:pointer;">Next →</button>`;
@@ -1224,15 +1208,11 @@ function playHTML() {
     <div style="margin-top:16px;">
       ${(() => {
         const roundDone = round.every(m => m.done);
-        if (S.gameMode === 'mexicano') {
-          if (S.schedule.length >= S.numRounds && S.currentRound === S.schedule.length - 1 && roundDone)
-            return `<button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>`;
-          return '';
-        }
-        if (S.gameMode === 'team-mexicano') {
+        if (S.gameMode === 'mexicano' || S.gameMode === 'team-mexicano') {
+          const nextFn = S.gameMode === 'mexicano' ? 'mexicanoNextRound' : 'teamMexicanoNextRound';
           if (roundDone) return `
             <button class="btn btn-gold btn-full" style="font-size:16px;" onclick="finish()">🏆 See Final Results</button>
-            <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="teamMexicanoNextRound()">Next Round →</button>`;
+            <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="${nextFn}()">Next Round →</button>`;
           return '';
         }
         if (allDone) return `
