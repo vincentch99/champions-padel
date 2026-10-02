@@ -254,6 +254,20 @@
   </div>
 </div>
 
+<div id="stats-modal" style="display:none;position:fixed;inset:0;z-index:1001;
+     background:rgba(0,0,0,0.97);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="width:100%;max-width:540px;margin:0 auto;padding:16px 16px 48px;box-sizing:border-box;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button onclick="closeStatsModal()"
+        style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);
+               border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;font-family:inherit;">
+        ✕ Close
+      </button>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+</div>
+
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
 const COLORS       = ['#f5c842','#60a5fa','#f87171','#4ade80','#fb923c','#a78bfa','#34d399','#f472b6','#e879f9','#22d3ee','#fbbf24','#86efac'];
@@ -1581,7 +1595,7 @@ function finalHTML() {
                 <td>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
-                    <div style="font-weight:700;">${p.name}</div>
+                    <div style="font-weight:700;cursor:pointer;" onclick="showStats('${s.id}')">${p.name} <span style="font-size:10px;opacity:0.45;">↗</span></div>
                   </div>
                 </td>
                 ${tennis
@@ -1597,6 +1611,7 @@ function finalHTML() {
           </tbody>
         </table>
       </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;margin-bottom:20px;">Tap a name to view their stats</div>
 
       <div class="lbl" style="margin-bottom:8px;">Match History</div>
       ${S.schedule.map((round, ri) => `
@@ -1667,7 +1682,7 @@ function finalHTML() {
                 <div style="display:flex;align-items:center;gap:8px;">
                   <div style="width:10px;height:10px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
                   <div>
-                    <div style="font-weight:700;">${t.name}</div>
+                    <div style="font-weight:700;cursor:pointer;" onclick="showStats('${s.id}')">${t.name} <span style="font-size:10px;opacity:0.45;">↗</span></div>
                     <div style="font-size:11px;color:var(--muted);">${pname(t)}</div>
                   </div>
                 </div>
@@ -1686,6 +1701,7 @@ function finalHTML() {
         </tbody>
       </table>
     </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;margin-bottom:20px;">Tap a name to view their stats</div>
 
     <div class="lbl" style="margin-bottom:8px;">Match History</div>
     ${S.schedule.map((round, ri) => `
@@ -1744,6 +1760,327 @@ function addAmericanoRound() {
   S.schedule.push(newRound);
   S.currentRound = S.schedule.length - 1;
   persist(); go('play');
+}
+
+// ── Player / Team Stats ───────────────────────────────────────────────────────
+
+function showStats(id) {
+  document.getElementById('stats-content').innerHTML = buildStatsHTML(id);
+  document.getElementById('stats-modal').style.display = 'block';
+  document.getElementById('stats-modal').scrollTop = 0;
+  setTimeout(function() {
+    var canvas = document.getElementById('rank-chart');
+    if (canvas) drawRankChart(canvas, computeRanks(id));
+  }, 20);
+}
+
+function closeStatsModal() {
+  document.getElementById('stats-modal').style.display = 'none';
+}
+
+function computeRanks(id) {
+  var isMex = S.gameMode === 'mexicano';
+  return S.schedule.map(function(_, ri) {
+    return computeRankAtRound(id, S.schedule.slice(0, ri + 1), isMex);
+  });
+}
+
+function computeRankAtRound(id, schedule, isMex) {
+  if (isMex) {
+    var map = {};
+    (S.players || []).forEach(function(p) { map[p.id] = { id: p.id, pts: 0, sw: 0, sl: 0, w: 0 }; });
+    schedule.forEach(function(r) { r.forEach(function(m) {
+      if (!m.done) return;
+      var tennis = S.scoringMode === 'tennis';
+      var sA = tennis ? m.setsA : m.scoreA, sB = tennis ? m.setsB : m.scoreB;
+      var winA = sA > sB;
+      [m.playerA1, m.playerA2].forEach(function(pid) {
+        if (!map[pid]) return;
+        if (tennis) { map[pid].sw += sA; map[pid].sl += sB; } else map[pid].pts += sA;
+        if (winA) map[pid].w++;
+      });
+      [m.playerB1, m.playerB2].forEach(function(pid) {
+        if (!map[pid]) return;
+        if (tennis) { map[pid].sw += sB; map[pid].sl += sA; } else map[pid].pts += sB;
+        if (!winA) map[pid].w++;
+      });
+    }); });
+    var sorted = Object.values(map).sort(function(a, b) {
+      return S.scoringMode === 'tennis'
+        ? (b.sw - b.sl) - (a.sw - a.sl) || b.sw - a.sw
+        : b.pts - a.pts || b.w - a.w;
+    });
+    return sorted.findIndex(function(s) { return s.id === id; }) + 1;
+  }
+  var map2 = {};
+  (S.teams || []).forEach(function(t) { map2[t.id] = { id: t.id, pts: 0, sw: 0, sl: 0, w: 0, mw: 0 }; });
+  schedule.forEach(function(r) { r.forEach(function(m) {
+    if (!m.done) return;
+    var tennis = S.scoringMode === 'tennis';
+    if (tennis) {
+      var sA = m.setsA, sB = m.setsB;
+      if (map2[m.teamA]) { map2[m.teamA].sw += sA; map2[m.teamA].sl += sB; if (sA > sB) map2[m.teamA].mw++; }
+      if (map2[m.teamB]) { map2[m.teamB].sw += sB; map2[m.teamB].sl += sA; if (sB > sA) map2[m.teamB].mw++; }
+    } else {
+      if (map2[m.teamA]) { map2[m.teamA].pts += m.scoreA; if (m.scoreA > m.scoreB) map2[m.teamA].w++; }
+      if (map2[m.teamB]) { map2[m.teamB].pts += m.scoreB; if (m.scoreB > m.scoreA) map2[m.teamB].w++; }
+    }
+  }); });
+  var sorted2 = Object.values(map2).sort(function(a, b) {
+    return S.scoringMode === 'tennis'
+      ? b.mw - a.mw || b.sw - a.sw
+      : b.pts - a.pts || b.w - a.w;
+  });
+  return sorted2.findIndex(function(s) { return s.id === id; }) + 1;
+}
+
+function getEntityMatches(id, isMex) {
+  var result = [];
+  S.schedule.forEach(function(r, ri) {
+    r.forEach(function(m) {
+      var onA = false, included = false;
+      if (isMex) {
+        if (m.playerA1 === id || m.playerA2 === id) { onA = true; included = true; }
+        else if (m.playerB1 === id || m.playerB2 === id) { included = true; }
+      } else {
+        if (m.teamA === id) { onA = true; included = true; }
+        else if (m.teamB === id) { included = true; }
+      }
+      if (included) result.push({ m: m, round: ri + 1, onA: onA });
+    });
+  });
+  return result;
+}
+
+function findBestPartner(playerId) {
+  var rec = {};
+  S.schedule.forEach(function(r) { r.forEach(function(m) {
+    if (!m.done) return;
+    var tennis = S.scoringMode === 'tennis';
+    var sA = tennis ? m.setsA : m.scoreA, sB = tennis ? m.setsB : m.scoreB;
+    var partnerId = null, won = false;
+    if (m.playerA1 === playerId) { partnerId = m.playerA2; won = sA > sB; }
+    else if (m.playerA2 === playerId) { partnerId = m.playerA1; won = sA > sB; }
+    else if (m.playerB1 === playerId) { partnerId = m.playerB2; won = sB > sA; }
+    else if (m.playerB2 === playerId) { partnerId = m.playerB1; won = sB > sA; }
+    if (!partnerId) return;
+    if (!rec[partnerId]) rec[partnerId] = { w: 0, l: 0 };
+    if (won) rec[partnerId].w++; else rec[partnerId].l++;
+  }); });
+  var best = null, bestScore = -Infinity;
+  Object.keys(rec).forEach(function(pid) {
+    var score = rec[pid].w * 2 - rec[pid].l;
+    if (score > bestScore) { best = pid; bestScore = score; }
+  });
+  return best ? { id: best, w: rec[best].w, l: rec[best].l } : null;
+}
+
+function findHardestOpponent(id, isMex) {
+  var rec = {};
+  S.schedule.forEach(function(r) { r.forEach(function(m) {
+    if (!m.done) return;
+    var tennis = S.scoringMode === 'tennis';
+    var sA = tennis ? m.setsA : m.scoreA, sB = tennis ? m.setsB : m.scoreB;
+    var onA, opponents;
+    if (isMex) {
+      if (m.playerA1 === id || m.playerA2 === id) { onA = true; opponents = [m.playerB1, m.playerB2]; }
+      else if (m.playerB1 === id || m.playerB2 === id) { onA = false; opponents = [m.playerA1, m.playerA2]; }
+      else return;
+    } else {
+      if (m.teamA === id) { onA = true; opponents = [m.teamB]; }
+      else if (m.teamB === id) { onA = false; opponents = [m.teamA]; }
+      else return;
+    }
+    var lost = onA ? sB > sA : sA > sB;
+    opponents.forEach(function(oppId) {
+      if (oppId === id) return;
+      if (!rec[oppId]) rec[oppId] = { lostTo: 0, beatThem: 0 };
+      if (lost) rec[oppId].lostTo++; else rec[oppId].beatThem++;
+    });
+  }); });
+  var worst = null, worstL = 0;
+  Object.keys(rec).forEach(function(oppId) {
+    if (rec[oppId].lostTo > worstL) { worst = oppId; worstL = rec[oppId].lostTo; }
+  });
+  return worst && worstL > 0 ? { id: worst, lostTo: worstL, beatThem: rec[worst].beatThem } : null;
+}
+
+function buildStatsHTML(id) {
+  var isMex = S.gameMode === 'mexicano';
+  var tennis = S.scoringMode === 'tennis';
+  var medals = ['🥇','🥈','🥉'];
+  var name, color, subtitle = '';
+  if (isMex) { var pp = mexPlayer(id); name = pp.name; color = pp.color; }
+  else { var tt = team(id); name = tt.name; color = tt.color; subtitle = pname(tt); }
+
+  var allM = getEntityMatches(id, isMex);
+  var done = allM.filter(function(e) { return e.m.done; });
+  var wins = 0, losses = 0, pts = 0, conceded = 0;
+  done.forEach(function(e) {
+    var m = e.m, onA = e.onA;
+    var my = onA ? (tennis ? m.setsA : m.scoreA) : (tennis ? m.setsB : m.scoreB);
+    var op = onA ? (tennis ? m.setsB : m.scoreB) : (tennis ? m.setsA : m.scoreA);
+    pts += my; conceded += op;
+    if (my > op) wins++; else losses++;
+  });
+  var played = done.length;
+  var winRate = played ? Math.round(wins / played * 100) : 0;
+  var finalRank = computeRankAtRound(id, S.schedule, isMex);
+  var rankLabel = medals[finalRank - 1] || '#' + finalRank;
+
+  var bestPartnerHTML = '';
+  if (isMex) {
+    var bp = findBestPartner(id);
+    if (bp) {
+      var bpp = mexPlayer(bp.id);
+      bestPartnerHTML = '<div class="card" style="margin-bottom:10px;">' +
+        '<div class="lbl" style="margin-bottom:8px;">Best Partner</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="width:9px;height:9px;border-radius:50%;background:' + bpp.color + ';"></div>' +
+          '<span style="font-weight:700;">' + bpp.name + '</span>' +
+          '<span style="color:var(--green);margin-left:auto;font-weight:700;">' + bp.w + 'W</span>' +
+          '<span style="color:var(--muted);font-size:12px;margin-left:4px;">' + bp.l + 'L</span>' +
+        '</div></div>';
+    }
+  }
+
+  var hardestHTML = '';
+  var ho = findHardestOpponent(id, isMex);
+  if (ho) {
+    var hoName = isMex ? mexPlayer(ho.id).name : team(ho.id).name;
+    var hoColor = isMex ? mexPlayer(ho.id).color : team(ho.id).color;
+    hardestHTML = '<div class="card" style="margin-bottom:10px;">' +
+      '<div class="lbl" style="margin-bottom:8px;">Hardest Opponent</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:9px;height:9px;border-radius:50%;background:' + hoColor + ';"></div>' +
+        '<span style="font-weight:700;">' + hoName + '</span>' +
+        '<span style="color:var(--red);margin-left:auto;font-weight:700;">' + ho.lostTo + 'L</span>' +
+        '<span style="color:var(--muted);font-size:12px;margin-left:4px;">' + ho.beatThem + 'W</span>' +
+      '</div></div>';
+  }
+
+  var histRows = done.map(function(e) {
+    var m = e.m, onA = e.onA, round = e.round;
+    var my = onA ? (tennis ? m.setsA : m.scoreA) : (tennis ? m.setsB : m.scoreB);
+    var op = onA ? (tennis ? m.setsB : m.scoreB) : (tennis ? m.setsA : m.scoreA);
+    var won = my > op;
+    var desc;
+    if (isMex) {
+      var pids = onA ? [m.playerA1, m.playerA2] : [m.playerB1, m.playerB2];
+      var partners = pids.filter(function(pid) { return pid !== id; }).map(function(pid) { return mexPlayer(pid).name; });
+      var opps = (onA ? [m.playerB1, m.playerB2] : [m.playerA1, m.playerA2]).map(function(pid) { return mexPlayer(pid).name; });
+      desc = 'w/ ' + partners.join(' & ') + ' vs ' + opps.join(' & ');
+    } else {
+      desc = 'vs ' + team(onA ? m.teamB : m.teamA).name;
+    }
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;' +
+      'background:var(--surface);border-radius:8px;margin-bottom:4px;font-size:12px;">' +
+      '<div style="font-size:15px;color:' + (won ? 'var(--green)' : 'var(--red)') + ';">' + (won ? '✓' : '✗') + '</div>' +
+      '<div style="flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+        '<span style="color:var(--text);font-weight:600;">R' + round + '</span> · ' + desc +
+      '</div>' +
+      '<div style="font-weight:700;color:' + (won ? 'var(--green)' : 'var(--red)') + ';">' + my + '–' + op + '</div>' +
+      '</div>';
+  }).join('');
+
+  var ptsLabel = tennis ? 'Sets W' : 'Points';
+  var concLabel = tennis ? 'Sets L' : 'Conceded';
+
+  return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">' +
+      '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>' +
+      '<div><div style="font-size:20px;font-weight:800;">' + name + '</div>' +
+        (subtitle ? '<div style="font-size:12px;color:var(--muted);margin-top:2px;">' + subtitle + '</div>' : '') +
+      '</div>' +
+      '<div style="margin-left:auto;font-size:28px;">' + rankLabel + '</div>' +
+    '</div>' +
+
+    '<div class="info-box" style="margin-bottom:16px;">' +
+      '<div class="info-cell"><div class="info-val" style="color:' + (winRate >= 50 ? 'var(--green)' : 'var(--red)') + ';">' + winRate + '%</div><div class="info-key">Win Rate</div></div>' +
+      '<div class="info-cell"><div class="info-val">' + played + '</div><div class="info-key">Played</div></div>' +
+      '<div class="info-cell"><div class="info-val" style="color:var(--green);">' + wins + '</div><div class="info-key">Wins</div></div>' +
+      '<div class="info-cell"><div class="info-val" style="color:var(--red);">' + losses + '</div><div class="info-key">Losses</div></div>' +
+      '<div class="info-cell"><div class="info-val">' + pts + '</div><div class="info-key">' + ptsLabel + '</div></div>' +
+      '<div class="info-cell"><div class="info-val" style="color:var(--muted);">' + conceded + '</div><div class="info-key">' + concLabel + '</div></div>' +
+    '</div>' +
+
+    '<div class="card" style="margin-bottom:10px;">' +
+      '<div class="lbl" style="margin-bottom:10px;">Rank After Each Round</div>' +
+      '<canvas id="rank-chart" style="display:block;"></canvas>' +
+    '</div>' +
+
+    bestPartnerHTML + hardestHTML +
+
+    '<div class="lbl" style="margin-bottom:8px;">Match History</div>' +
+    (histRows || '<div style="color:var(--muted);padding:8px 0;font-size:14px;">No completed matches</div>');
+}
+
+function drawRankChart(canvas, ranks) {
+  if (!ranks || !ranks.length) return;
+  var isMex = S.gameMode === 'mexicano';
+  var total = isMex ? (S.players || []).length : (S.teams || []).length;
+  var dpr = window.devicePixelRatio || 1;
+  var W = Math.max(canvas.parentElement.clientWidth - 36, 100);
+  var H = 130;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var P = { t: 18, r: 18, b: 22, l: 28 };
+  var cW = W - P.l - P.r, cH = H - P.t - P.b;
+  var n = ranks.length;
+  var SF = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+  // faint grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (var r = 1; r <= total; r++) {
+    var gy = P.t + ((r - 1) / Math.max(total - 1, 1)) * cH;
+    ctx.beginPath(); ctx.moveTo(P.l, gy); ctx.lineTo(P.l + cW, gy); ctx.stroke();
+  }
+
+  // compute point coords
+  var pts = ranks.map(function(rank, i) {
+    return {
+      x: n === 1 ? P.l + cW / 2 : P.l + (i / (n - 1)) * cW,
+      y: P.t + ((rank - 1) / Math.max(total - 1, 1)) * cH,
+      rank: rank
+    };
+  });
+
+  // line
+  ctx.strokeStyle = '#f5c842';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach(function(p, i) { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  ctx.stroke();
+
+  // dots + rank labels
+  pts.forEach(function(p, i) {
+    var prev = pts[i - 1];
+    var col = !prev ? '#f5c842' : p.rank < prev.rank ? '#4ade80' : p.rank > prev.rank ? '#f87171' : '#f5c842';
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col;
+    ctx.font = '700 10px ' + SF;
+    ctx.textAlign = 'center';
+    ctx.fillText('#' + p.rank, p.x, p.rank === 1 ? p.y + 15 : p.y - 9);
+  });
+
+  // y-axis: show rank 1 and max rank labels
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '400 9px ' + SF;
+  ctx.textAlign = 'right';
+  [1, total].forEach(function(r2) {
+    var ly = P.t + ((r2 - 1) / Math.max(total - 1, 1)) * cH + 3;
+    ctx.fillText(r2, P.l - 5, ly);
+  });
+
+  // x-axis round labels
+  ctx.fillStyle = '#4b5563';
+  ctx.textAlign = 'center';
+  pts.forEach(function(p, i) { ctx.fillText('R' + (i + 1), p.x, H - 4); });
 }
 
 // ── Share Results Card ─────────────────────────────────────────────────────────
